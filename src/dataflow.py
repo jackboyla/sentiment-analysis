@@ -1,6 +1,7 @@
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
+import re
 
 
 # https://huggingface.co/google/reformer-enwik8
@@ -10,8 +11,9 @@ Therefore, this model does not need a tokenizer. The following function can inst
 '''
 
 class CharacterTokenizer():
-    def __init__(self, pad_token_id=0):
+    def __init__(self, pad_token_id=0, encoding="ISO-8859-1"):
         self.pad_token_id = torch.tensor(pad_token_id)
+        self.encoding = encoding
 
     # Encoding
     def encode(self, list_of_strings):
@@ -28,13 +30,21 @@ class CharacterTokenizer():
 
         for idx, string in enumerate(list_of_strings):
             # make sure string is in byte format
-            if not isinstance(string, bytes):
-                string = str.encode(string)
+            orig_string = string
 
-            input_ids[idx, :len(string)] = torch.tensor([x + 2 for x in string])
+            if not isinstance(string, bytes):
+                string = str.encode(string, encoding=self.encoding)
+
+            try:
+                input_ids[idx, :len(string)] = torch.tensor([x + 2 for x in string])
+            except Exception as error:
+                print('Caught this error: ' + repr(error))
+                print(f"\nWas working on this: {orig_string}, as {string} {idx}")
+                print(f"List of strings: \n{list_of_strings}")
+
             attention_masks[idx, :len(string)] = 1
 
-        return input_ids, attention_masks
+        return input_ids.squeeze(), attention_masks.squeeze()
         
     # Decoding
     def decode(self, outputs_ids):
@@ -44,10 +54,21 @@ class CharacterTokenizer():
             decoded_outputs.append("".join([chr(x - 2) if x > 1 else "" for x in output_ids]))
         return decoded_outputs
 
+def remove_urls(text):
+    url_pattern = re.compile(r'https?://\S+|www\.\S+')
+    return url_pattern.sub(r'', text)
+
+def remove_mentions_hashtags(text):
+    mention_pattern = re.compile(r'@\w+')
+    hashtag_pattern = re.compile(r'#\w+')
+    text = mention_pattern.sub(r'', text)
+    text = hashtag_pattern.sub(r'', text)
+    return text
 
 class TweetDataset(Dataset):
     def __init__(self, tweets, labels, tokenizer):
-        self.tweets = tweets
+        tweets = tweets.apply(remove_urls)
+        self.tweets = tweets.apply(remove_mentions_hashtags)
         self.labels = labels
         self.tokenizer = tokenizer
 
@@ -55,12 +76,14 @@ class TweetDataset(Dataset):
         return len(self.tweets)
 
     def __getitem__(self, idx):
-        tweet = self.tweets[idx]
-        label = self.labels[idx]
+        tweets = self.tweets[idx]
+        labels = self.labels[idx]
 
-        encoded_input_ids, attention_masks = self.tokenizer.encode(tweet)
+        encoded_input_ids, attention_masks = self.tokenizer.encode(tweets)
         return {
-            'tweet': tweet,
+            'tweet': tweets,
             'input_ids': encoded_input_ids,
-            'attention_mask': attention_masks
-                }, label
+            'attention_mask': attention_masks,
+            'labels': labels
+                }
+    
