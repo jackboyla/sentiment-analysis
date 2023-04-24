@@ -1,26 +1,6 @@
-# import torch.nn as nn
-
-# class SentimentClassifier(nn.Module):
-#     def __init__(self, hidden_size, num_classes):
-#         super(SentimentClassifier, self).__init__()
-#         self.hidden_size = hidden_size
-#         self.num_classes = num_classes
-#         self.classifier = nn.Sequential(
-#             nn.Linear(hidden_size, hidden_size),
-#             nn.ReLU(),
-#             nn.Linear(hidden_size, num_classes)
-#         )
-
-#     def forward(self, inputs):
-#         # get last hidden state of the Reformer
-#         hidden_states = inputs.hidden_states[-1]
-#         pooled_output = hidden_states[:, 0]
-#         logits = self.classifier(pooled_output)
-#         return logits
-    
 import torch, torch.nn as nn
 import pytorch_lightning as L
-from transformers import ReformerModelWithLMHead
+from transformers import CanineModel
 
 # --------------------------------
 # Step 1: Define a LightningModule
@@ -30,14 +10,20 @@ from transformers import ReformerModelWithLMHead
 
 
 class SentimentClassifier(L.LightningModule):
-    def __init__(self, tokenizer):
+    def __init__(self, tokenizer, freeze_encoder=True):
         super().__init__()
-        self.reformer = ReformerModelWithLMHead.from_pretrained("google/reformer-enwik8")
-        # # Freeze the weights of the first layer (fc1)
-        # for param in self.reformer.parameters():
-        #     param.requires_grad = False
+        # self.encoder = ReformerModelWithLMHead.from_pretrained("google/reformer-enwik8")
+        self.encoder = CanineModel.from_pretrained("google/canine-c")
+        self.encoder = self.encoder
 
-        self.hidden_size = self.reformer.config.hidden_size
+        if freeze_encoder:
+            # Freeze the weights of the first layer (fc1)
+            for param in self.encoder.parameters():
+                param.requires_grad = False
+
+        self.dropout = nn.Dropout(self.encoder.config.hidden_dropout_prob)
+
+        self.hidden_size = self.encoder.config.hidden_size
         self.num_classes = 2
         self.classifier_head = nn.Sequential(
             nn.Linear(self.hidden_size, self.hidden_size),
@@ -49,28 +35,27 @@ class SentimentClassifier(L.LightningModule):
         self.criterion = torch.nn.CrossEntropyLoss()
 
     def get_logits(self, inputs):
-        reformer_output = self.reformer(**inputs, output_hidden_states=True)  
-        pooled_output = self.get_last_hidden_state_output(reformer_output)
+        encoder_output = self.encoder(**inputs, output_hidden_states=True)  
+        pooled_output = encoder_output['pooler_output']
+        pooled_output = self.dropout(pooled_output)
         logits = self.classifier_head(pooled_output)
         return logits
 
-    def get_last_hidden_state_output(self, reformer_output):
-        # get last hidden state of the Reformer
-        hidden_states = reformer_output.hidden_states[-1]
-        pooled_output = hidden_states[:, 0]
-        return pooled_output
+    # def get_last_hidden_state_output(self, encoder_output):
+    #     # get last hidden state of the encoder
+    #     hidden_states = encoder_output.hidden_states[-1]
+    #     pooled_output = hidden_states[:, 0]
+    #     return pooled_output
 
     def forward(self, text):
         # in lightning, forward defines the prediction/inference actions
 
         # Tokenize input text
         # text = "I didn't think sheep were going to be so wonderful! :)"
-        input_ids, attention_masks = self.tokenizer.encode([text])
+        inputs = self.tokenizer([text])
 
         # Make prediction
-        reformer_logits = self.reformer(**{'input_ids': input_ids}, output_hidden_states=True)  
-        pooled_output = self.get_last_hidden_state_output(reformer_logits)
-        logits = self.classifier_head(pooled_output)
+        logits = self.get_logits(inputs)
         preds = torch.argmax(logits, dim=1).flatten().tolist()
         return preds
 
