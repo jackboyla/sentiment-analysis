@@ -7,3 +7,5 @@
 Character-level models solve this by having a smaller vocabulary.
 
 > Character level models are not a panacea and come with their own set of drawbacks. The two most glaring ones are the lack of semantic content of the input (characters are meaningless) and the growth in the length of our inputs. The average English word has five characters meaning that dependent on architecture, we can expect a 5X increase in compute requirements.
+
+The Reformer architecture is designed to be memory-efficient and scalable, making it a good choice for large-scale language modeling tasks
