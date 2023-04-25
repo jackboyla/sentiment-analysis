@@ -1,5 +1,8 @@
 
+import torch
 from torch.utils.data import Dataset
+import torch.nn.functional as F
+from torch.nn.utils.rnn import pad_sequence
 import re
 
 def remove_urls(text):
@@ -33,3 +36,19 @@ class TweetDataset(Dataset):
         encoded_input.update({'tweet': tweets, 'labels': labels})
         return encoded_input
     
+
+def collate_fn(batch, input_pad_token_id=0):
+    '''
+    dynamically padding input sequences per batch
+    batch is alist of dicts
+    '''
+
+    attention_masks = [torch.tensor(sample['attention_mask']) for sample in batch]
+    input_ids = [torch.tensor(sample['input_ids']) for sample in batch]
+    labels = [sample['labels'] for sample in batch]
+
+    input_ids = pad_sequence(input_ids, batch_first=True, padding_value=input_pad_token_id)
+    attention_masks = pad_sequence(attention_masks, batch_first=True, padding_value=0.0)
+        
+
+    return {'input_ids': input_ids, 'attention_mask': attention_masks}, torch.tensor(labels)
