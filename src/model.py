@@ -49,7 +49,6 @@ class SentimentClassifier(L.LightningModule):
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop. It is independent of forward
         inputs, labels = batch
-        print(inputs)
         logits = self.get_logits(inputs)
         loss = self.criterion(logits, labels)
         self.log("train_loss", loss)
