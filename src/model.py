@@ -2,13 +2,6 @@ import torch, torch.nn as nn
 import pytorch_lightning as L
 from transformers import CanineModel
 
-# --------------------------------
-# Step 1: Define a LightningModule
-# --------------------------------
-# A LightningModule (nn.Module subclass) defines a full *system*
-# (ie: an LLM, diffusion model, autoencoder, or simple image classifier).
-
-
 class SentimentClassifier(L.LightningModule):
     def __init__(self, tokenizer, freeze_encoder=True):
         super().__init__()
@@ -35,24 +28,18 @@ class SentimentClassifier(L.LightningModule):
         self.criterion = torch.nn.CrossEntropyLoss()
 
     def get_logits(self, inputs):
-        encoder_output = self.encoder(**inputs, output_hidden_states=True)  
+        encoder_output = self.encoder(**inputs, output_hidden_states=True) 
         pooled_output = encoder_output['pooler_output']
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier_head(pooled_output)
         return logits
-
-    # def get_last_hidden_state_output(self, encoder_output):
-    #     # get last hidden state of the encoder
-    #     hidden_states = encoder_output.hidden_states[-1]
-    #     pooled_output = hidden_states[:, 0]
-    #     return pooled_output
 
     def forward(self, text):
         # in lightning, forward defines the prediction/inference actions
 
         # Tokenize input text
         # text = "I didn't think sheep were going to be so wonderful! :)"
-        inputs = self.tokenizer([text])
+        inputs = self.tokenizer(text, return_tensors='pt')
 
         # Make prediction
         logits = self.get_logits(inputs)
@@ -62,8 +49,7 @@ class SentimentClassifier(L.LightningModule):
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop. It is independent of forward
         inputs, labels = batch
-        # outputs : torch.Size([B, seq_len, out_features=258])
-        # hidden_states : list of len 13 each of torch.Size([B, seq_len, hidden_size=1024])
+        print(inputs)
         logits = self.get_logits(inputs)
         loss = self.criterion(logits, labels)
         self.log("train_loss", loss)
