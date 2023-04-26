@@ -14,15 +14,16 @@ class SentimentClassifier(L.LightningModule):
             for param in self.encoder.parameters():
                 param.requires_grad = False
 
-        self.dropout = nn.Dropout(self.encoder.config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(self.encoder.config.hidden_dropout_prob) # 0.1 for canine-c
 
         self.hidden_size = self.encoder.config.hidden_size
         self.num_classes = 2
-        self.classifier_head = nn.Sequential(
-            nn.Linear(self.hidden_size, self.hidden_size),
-            nn.ReLU(),
-            nn.Linear(self.hidden_size, self.num_classes)
-        )
+        # self.classifier_head = nn.Sequential(
+        #     nn.Linear(self.hidden_size, self.hidden_size),
+        #     nn.ReLU(),
+        #     nn.Linear(self.hidden_size, self.num_classes)
+        # )
+        self.classifier_head = nn.Linear(self.hidden_size, self.num_classes)
 
         self.tokenizer = tokenizer
         self.criterion = torch.nn.CrossEntropyLoss()
