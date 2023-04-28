@@ -1,4 +1,4 @@
-
+seed: 42
 datafiles:
     data_dir: '/data/Sentiment140-dataset/training.1600000.processed.noemoticon.csv'
     dataset_encoding: 'ISO-8859-1'
@@ -9,7 +9,6 @@ hyperparameters:
     batch_size: 8
     lr: 1e-5
     profiler: 'simple'
-    seed: 42
 
 callbacks:
     early_stopping:
