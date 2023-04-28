@@ -6,14 +6,21 @@ datafiles:
 hyperparameters:
     backbone: 'google/canine-c'
     max_epochs: 30
-    batch_size: 64
+    batch_size: 8
     lr: 1e-5
+    profiler: 'simple'
     seed: 42
-    monitor: 'val_loss'
 
+callbacks:
     early_stopping:
         patience: 5
         min_delta: 0.05
+        monitor: 'val_loss'
 
     checkpoint:
         save_top_k: 2
+        monitor: 'val_loss'
+
+logging:
+    wandb: True
+    project_name: 'sentiment-analysis'
