@@ -1,6 +1,8 @@
 # data
 /data
 lightning_logs
+/wandb
+*.wandb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
