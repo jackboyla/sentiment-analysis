@@ -8,6 +8,7 @@ hyperparameters:
     max_epochs: 30
     batch_size: 8
     lr: 1e-5
+    freeze_encoder: 0.5
     profiler: 'simple'
 
 callbacks:
