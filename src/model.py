@@ -3,30 +3,33 @@ import pytorch_lightning as L
 from transformers import CanineModel
 
 class SentimentClassifier(L.LightningModule):
-    def __init__(self, tokenizer, freeze_encoder=True):
+    def __init__(self, tokenizer, freeze_encoder=True, lr=1e-5, num_classes=2):
         super().__init__()
-        # self.encoder = ReformerModelWithLMHead.from_pretrained("google/reformer-enwik8")
+        
+        self.lr = lr
         self.encoder = CanineModel.from_pretrained("google/canine-c")
         self.encoder = self.encoder
 
         if freeze_encoder:
-            # Freeze the weights of the first layer (fc1)
+            # Freeze the weights of the encoder
             for param in self.encoder.parameters():
                 param.requires_grad = False
 
         self.dropout = nn.Dropout(self.encoder.config.hidden_dropout_prob) # 0.1 for canine-c
 
         self.hidden_size = self.encoder.config.hidden_size
-        self.num_classes = 2
-        # self.classifier_head = nn.Sequential(
-        #     nn.Linear(self.hidden_size, self.hidden_size),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_size, self.num_classes)
-        # )
-        self.classifier_head = nn.Linear(self.hidden_size, self.num_classes)
+        self.num_classes = num_classes
+        self.classifier_head = nn.Sequential(
+            nn.Linear(self.hidden_size, self.hidden_size),
+            nn.ReLU(),
+            nn.Linear(self.hidden_size, self.num_classes)
+        )
 
         self.tokenizer = tokenizer
         self.criterion = torch.nn.CrossEntropyLoss()
+
+        # save hyper-parameters to self.hparamsm auto-logged by wandb
+        self.save_hyperparameters()
 
     def get_logits(self, inputs):
         encoder_output = self.encoder(**inputs, output_hidden_states=True) 
@@ -68,5 +71,5 @@ class SentimentClassifier(L.LightningModule):
         self.log("test_loss", test_loss)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
