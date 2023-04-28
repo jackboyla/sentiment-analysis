@@ -12,13 +12,14 @@ class SentimentClassifier(L.LightningModule):
 
         if freeze_encoder:
             total_params = sum(1 for _ in self.encoder.parameters())
+            total_frozen_params = round(float(freeze_encoder) * total_params)
             i = 0
             # Freeze the weights of the encoder
             for param in self.encoder.parameters():
-                if i < round(float(freeze_encoder)) * total_params:
+                if i < total_frozen_params:
                     param.requires_grad = False
                 i += 1
-            print(f"Frozen the first {float(freeze_encoder)*100}% of encoder weights")
+            print(f"Frozen the first {total_frozen_params} out of {total_params} encoder weights")
 
         self.dropout = nn.Dropout(self.encoder.config.hidden_dropout_prob) # 0.1 for canine-c
 
