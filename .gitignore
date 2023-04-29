@@ -1,8 +1,9 @@
 # data
 /data
-lightning_logs
+logs
 /wandb
 *.wandb
+wandb-sentiment-analysis
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
