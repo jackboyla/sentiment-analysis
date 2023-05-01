@@ -4,12 +4,15 @@ datafiles:
     dataset_encoding: 'ISO-8859-1'
 
 hyperparameters:
-    backbone: 'google/canine-c'
+    backbone: 
+        object: transformers.models.canine.modeling_canine.CanineModel
+        name: 'google/canine-c'
     max_epochs: 200
-    batch_size: 32
+    batch_size: 64
     lr: 1e-5
     freeze_encoder: 0.5
     profiler: 'simple'
+    num_classes: 2
 
 callbacks:
     early_stopping:
@@ -23,4 +26,5 @@ callbacks:
 
 logging:
     wandb: True
-    project_name: 'sentiment-analysis'
+    project_name: 'wandb-sentiment-analysis'
+    log_dir: 'logs'
