@@ -26,7 +26,7 @@ cfg = OmegaConf.load(cfg_path)
 
 DATASET_COLUMNS = ["target", "ids", "date", "flag", "user", "text"]
 df = pd.read_csv(
-    'data/Sentiment140-dataset/training.1600000.processed.noemoticon.csv',
+    cfg.datafiles.data_dir,
     encoding=cfg.datafiles.dataset_encoding,
     names=DATASET_COLUMNS
     )
