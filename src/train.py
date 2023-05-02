@@ -67,6 +67,7 @@ test_dataloader = DataLoader(test_dataset, batch_size=cfg.hyperparameters.batch_
 
 
 if cfg.logging.wandb:
+    wandb.login(key=os.environ['WANDB_API_KEY'])
     wandb_logger = WandbLogger(project=cfg.logging.project_name)
     wandb_logger.experiment.config.update(cfg)
 
