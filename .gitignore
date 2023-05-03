@@ -1,6 +1,6 @@
 # data
-data/*
-logs
+/data/*
+logs/*
 /wandb
 *.wandb
 wandb-sentiment-analysis
