@@ -1,11 +1,11 @@
 import torch, torch.nn as nn
 import torchmetrics
-import pytorch_lightning as L
+import lightning.pytorch as pl
 import utils
 
 
 
-class SentimentClassifier(L.LightningModule):
+class SentimentClassifier(pl.LightningModule):
     def __init__(self, tokenizer, hyperparams):
         super().__init__()
         
@@ -78,7 +78,7 @@ class SentimentClassifier(L.LightningModule):
         loss = self.criterion(logits, labels)
         self.train_acc(logits, labels)
         self.train_f1(logits, labels)
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, prog_bar=True)
         self.log('train_acc', self.train_acc, on_step=True, on_epoch=False)
         self.log('train_F1', self.train_f1, on_step=True, on_epoch=False)
         return loss

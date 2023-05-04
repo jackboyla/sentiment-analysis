@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 import dataflow as dataflow
 import model as models
 
-import pytorch_lightning as L
+import lightning as L
 
 from sklearn.model_selection import train_test_split
 
@@ -16,8 +16,8 @@ from omegaconf import OmegaConf
 from transformers import CanineTokenizer
 
 from lightning.pytorch.cli import SaveConfigCallback
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, ModelSummary, DeviceStatsMonitor
-from pytorch_lightning.loggers import WandbLogger, CSVLogger
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, ModelSummary, DeviceStatsMonitor
+from lightning.pytorch.loggers import WandbLogger, CSVLogger
 import time
 import wandb
 
@@ -66,6 +66,14 @@ val_dataloader = DataLoader(val_dataset, batch_size=cfg.hyperparameters.batch_si
 test_dataloader = DataLoader(test_dataset, batch_size=cfg.hyperparameters.batch_size, shuffle=False, collate_fn=lambda b: dataflow.collate_fn(b, input_pad_token_id=tokenizer.pad_token_id))
 
 
+from lightning.pytorch.callbacks import TQDMProgressBar
+from tqdm import tqdm
+
+
+# Create a progress bar callback with refresh rate set to 'epoch'
+progress_bar_callback = TQDMProgressBar(refresh_rate=len(train_df)//cfg.hyperparameters.batch_size)
+
+
 if cfg.logging.wandb:
     wandb.login(key=os.environ['WANDB_API_KEY'])
     wandb_logger = WandbLogger(project=cfg.logging.project_name)
@@ -91,8 +99,9 @@ checkpoint_callback = ModelCheckpoint(save_top_k=cfg.callbacks.checkpoint.save_t
 
 trainer = L.Trainer(max_epochs=cfg.hyperparameters.max_epochs, 
                     profiler=cfg.hyperparameters.profiler,
+                    log_every_n_steps=100,
                     logger=[wandb_logger, csv_logger],
-                    callbacks=[ early_stop, checkpoint_callback, DeviceStatsMonitor() ]  # 
+                    callbacks=[ early_stop, checkpoint_callback, DeviceStatsMonitor(), progress_bar_callback ]  # 
                     )
 
 classifier = models.SentimentClassifier(tokenizer=tokenizer, 
