@@ -78,9 +78,9 @@ class SentimentClassifier(pl.LightningModule):
         loss = self.criterion(logits, labels)
         self.train_acc(logits, labels)
         self.train_f1(logits, labels)
-        self.log("train_loss", loss, prog_bar=True)
-        self.log('train_acc', self.train_acc, on_step=True, on_epoch=False)
-        self.log('train_F1', self.train_f1, on_step=True, on_epoch=False)
+        self.log("train_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
+        self.log('train_acc', self.train_acc, on_step=True, on_epoch=True)
+        self.log('train_F1', self.train_f1, on_step=True, on_epoch=True)
         return loss
     
     def validation_step(self, batch, batch_idx):
@@ -89,9 +89,9 @@ class SentimentClassifier(pl.LightningModule):
         val_loss = self.criterion(logits, labels)
         self.val_acc(logits, labels)
         self.val_f1(logits, labels)
-        self.log("val_loss", val_loss)
-        self.log('val_acc', self.val_acc, on_step=True, on_epoch=True)
-        self.log('val_F1', self.val_f1, on_step=True, on_epoch=True)
+        self.log("val_loss", val_loss, on_step=False, on_epoch=True)
+        self.log('val_acc', self.val_acc, on_step=False, on_epoch=True)
+        self.log('val_F1', self.val_f1, on_step=False, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         inputs, labels = batch
