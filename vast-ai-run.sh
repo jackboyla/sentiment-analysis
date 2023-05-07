@@ -1,7 +1,9 @@
 #!/bin/bash
 
+# Record the start time
+start_time=$(date +%s)
+
 echo 'starting up'
-env | grep WANDB_API_KEY >> /etc/environment;
 env | grep SLACK_HOOK >> /etc/environment;
 SLACK_HOOK=$(env | grep SLACK_HOOK | cut -d'=' -f2)
 
@@ -22,7 +24,8 @@ mkdir data
 cd data
 URL='https://storage.googleapis.com/kaggle-data-sets/2477/4140/bundle/archive.zip?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=gcp-kaggle-com%40kaggle-161607.iam.gserviceaccount.com%2F20230504%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20230504T191741Z&X-Goog-Expires=259200&X-Goog-SignedHeaders=host&X-Goog-Signature=49150b528cec87a1e719d2a8e289fb38bb9883ddf8a088014aef9a6cdc901f4e0ce0cf5ab5b0b6296e02ff7581280095d8da86b5a6be8771dde1cc1a4b3f8b10b7bae7da2bb112a19753c351425e061b6081596e617667237da44ee010f42994a76d8f6bc1a6ac589af8c5a58e3d8091e52ed1014a9564fbe05f4c3cac5ef114111d38b70baed4f494c84e5526e9140a6cb8548f40e3da59f345ec5f04c524f044b361ef780818f3c10032cf2a5a37d120d67a8e676e9f794fbb7adead0e436e3a42263620ffcd121f2aee869642e626da8059579552437d714371ad245cea72d222b5c1059581b8d6c8e14cf6cf4bc1b719e66db63ad46c9adecf6455fb2e52'
 wget ${URL} --no-check-certificate -O sentiment140.zip
-sudo apt-get install unzip
+sudo apt-get install -y zip
+sudo apt-get install -y unzip
 unzip sentiment140.zip
 
 # https://github.com/dutchcoders/transfer.sh/blob/main/examples.md#using-curl
@@ -109,7 +112,6 @@ function zip_and_transfer_artifacts() {
 
 cd $GIT_REPO_PATH
 
-
 # Loop through the config files
 for config in "${configs[@]}"
 do
@@ -122,6 +124,8 @@ do
 
     # Define the ARTIFACTS you want transferred
     ARTIFACTS=(${GIT_REPO_PATH}/configs/${config})
+
+    ARTIFACTS+=(${GIT_REPO_PATH}/${BASH_LOG})
 
     # Save CSV logs
     # Get the most recently created directory in logs/lightning_logs/
@@ -141,10 +145,23 @@ do
 done
 
 
-# Destroy Instance (from https://vast.ai/faq#Instances)
-cat ~/.ssh/authorized_keys | md5sum | awk '{print $1}' > ssh_key_hv; echo -n $VAST_CONTAINERLABEL | md5sum | awk '{print $1}' > instance_id_hv; head -c -1 -q ssh_key_hv instance_id_hv > ~/.vast_api_key;
+# Record the end time
+end_time=$(date +%s)
 
-apt-get install -y wget; wget https://raw.githubusercontent.com/vast-ai/vast-python/master/vast.py -O vast; chmod +x vast;
+# Calculate the elapsed time
+elapsed_time=$(($end_time - $start_time))
+
+# Echo the elapsed time
+echo "Elapsed time: $elapsed_time seconds"
+
+post_to_slack "Script finishing! Elapsed Time: ${elapsed_time}" "INFO" "${SLACK_HOOK}"
+
+
+# Destroy Instance (from https://vast.ai/faq#Instances)
+cat ~/.ssh/authorized_keys | md5sum | awk '{print $1}' > /ssh_key_hv; echo -n $VAST_CONTAINERLABEL | md5sum | awk '{print $1}' > /instance_id_hv; head -c -1 -q /ssh_key_hv /instance_id_hv > ~/.vast_api_key;
+
+mkdir ${GIT_REPO_PATH}/vast
+sudo apt-get install -y wget; wget https://raw.githubusercontent.com/vast-ai/vast-python/master/vast.py -O ./vast; chmod +x ./vast;
 
 ./vast destroy instance ${VAST_CONTAINERLABEL:2}
 
