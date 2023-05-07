@@ -1,18 +1,26 @@
 seed: 42
 datafiles:
-    data_dir: 'data/training.1600000.processed.noemoticon.csv'
+    data_dir: 'data/Sentiment140-dataset/training.1600000.processed.noemoticon.csv'
     dataset_encoding: 'ISO-8859-1'
+
+data_processing:
+    train_size: 0.6
+    val_size: 0.2
+    test_size: 0.2
 
 hyperparameters:
     backbone: 
         object: transformers.models.canine.modeling_canine.CanineModel
         name: 'google/canine-c'
-    max_epochs: 200
+    max_epochs: 250
     batch_size: 64
     lr: 1e-5
     freeze_encoder: 0.5
     profiler: 'simple'
     num_classes: 2
+
+trainer:
+    enable_progress_bar: False
 
 callbacks:
     early_stopping:

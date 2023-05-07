@@ -1,7 +1,12 @@
 seed: 42
 datafiles:
-    data_dir: '/data/Sentiment140-dataset/training.1600000.processed.noemoticon.csv'
+    data_dir: 'data/Sentiment140-dataset/training.1600000.processed.noemoticon.csv'
     dataset_encoding: 'ISO-8859-1'
+
+data_processing:
+    train_size: 500
+    val_size: 150
+    test_size: 2000
 
 hyperparameters:
     backbone: 
@@ -13,6 +18,9 @@ hyperparameters:
     freeze_encoder: True
     profiler: 'simple'
     num_classes: 2
+
+trainer:
+    enable_progress_bar: False
 
 callbacks:
     early_stopping:
