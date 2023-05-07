@@ -40,9 +40,9 @@ def binarize_sentiment(label):
 
 df['target'] = df.target.apply(lambda x: binarize_sentiment(x))
 
-train_size = cfg.data_processing.train_size if cfg.data_processing.train_size > 1.0 else cfg.data_processing.train_size*len(df)
-val_size = cfg.data_processing.val_size if cfg.data_processing.val_size > 1.0 else cfg.data_processing.val_size*len(df)
-test_size = cfg.data_processing.test_size if cfg.data_processing.test_size > 1.0 else cfg.data_processing.test_size*len(df)
+train_size = int(cfg.data_processing.train_size if cfg.data_processing.train_size > 1.0 else cfg.data_processing.train_size*len(df))
+val_size = int(cfg.data_processing.val_size if cfg.data_processing.val_size > 1.0 else cfg.data_processing.val_size*len(df))
+test_size = int(cfg.data_processing.test_size if cfg.data_processing.test_size > 1.0 else cfg.data_processing.test_size*len(df))
 
 train_df, test_df = train_test_split(df, train_size=train_size+val_size, test_size=test_size, random_state=42, stratify=df['target'])
 train_df, val_df = train_test_split(train_df, train_size=train_size, test_size=val_size, random_state=42, stratify=train_df['target'])
