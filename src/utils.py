@@ -50,12 +50,22 @@ class PrintTableMetricsCallback(L.pytorch.callbacks.Callback):
 
     def __init__(self) -> None:
         self.metrics: List = []
+        self.metrics_dict = None
 
     def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
         metrics_dict = copy.copy(trainer.callback_metrics)
-        rows =  [x.values() for x in metrics_dict]
-        self.metrics.append(metrics_dict)
-        rank_zero_info(tabulate.tabulate(rows, self.metrics[0].keys()))
+        # rows =  [x.values() for x in metrics_dict]
+        self.metrics_dict = metrics_dict
+
+    def on_validation_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
+        if self.metrics_dict:
+            val_metrics_dict = copy.copy(trainer.callback_metrics)
+            self.metrics_dict.update(val_metrics_dict)
+            rows = [self.metrics_dict.values()]
+            self.metrics.append(self.metrics_dict)
+            rank_zero_info(tabulate.tabulate(rows, self.metrics[0].keys()))
+
+
 
 
 
@@ -79,7 +89,7 @@ class SlackCallback(L.pytorch.callbacks.Callback):
         attachment = [
             {
                 "color": "#36a64f",
-                "text": f"Config:\n{self.cfg}"
+                "text": f"Run at : `{self.server_log_file}`\nConfig:\n{self.cfg}"
             }
         ]
         payload = {
@@ -89,7 +99,7 @@ class SlackCallback(L.pytorch.callbacks.Callback):
                         "type": "header",
                         "text": {
                             "type": "plain_text",
-                            "text": f":zap:Training Started!:hugging_face: `{self.server_log_file}`",
+                            "text": f":zap:Training Started!:hugging_face:",
                             "emoji": True
                         }
                     },
