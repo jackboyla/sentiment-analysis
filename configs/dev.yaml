@@ -4,8 +4,8 @@ datafiles:
     dataset_encoding: 'ISO-8859-1'
 
 data_processing:
-    train_size: 1000
-    val_size: 150
+    train_size: 10000
+    val_size: 1000
     test_size: 200
 
 hyperparameters:
