@@ -23,7 +23,8 @@ def load_obj(obj_path: str, default_obj_path: str = "", name: str = None) -> typ
         return model
     else:
         obj_path_list = obj_path.rsplit(".", 1)
-        obj_path = obj_path_list.pop(0) if len(obj_path_list) > 1 else default_obj_path
+        # obj_path = obj_path_list.pop(0) if len(obj_path_list) > 1 else default_obj_path
+        obj_path = obj_path_list.pop(0) if len(obj_path_list) > 1 else obj_path
         obj_name = obj_path_list[0]
         module_obj = importlib.import_module(obj_path)
 

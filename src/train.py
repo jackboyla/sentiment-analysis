@@ -16,7 +16,6 @@ import pandas as pd
 from omegaconf import OmegaConf
 from transformers import CanineTokenizer
 
-from lightning.pytorch.cli import SaveConfigCallback
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, ModelSummary, DeviceStatsMonitor
 from lightning.pytorch.loggers import WandbLogger, CSVLogger
 import time
@@ -73,61 +72,81 @@ val_dataloader = DataLoader(val_dataset, batch_size=cfg.hyperparameters.batch_si
 test_dataloader = DataLoader(test_dataset, batch_size=cfg.hyperparameters.batch_size, shuffle=False, collate_fn=lambda b: dataflow.collate_fn(b, input_pad_token_id=tokenizer.pad_token_id))
 
 
-if cfg.logging.wandb:
-    # # DO NOT login if you want to log offline
-    # wandb.login(key=os.environ['WANDB_API_KEY'])
-    wandb_logger = WandbLogger(project=cfg.logging.project_name, 
-                               offline=True
-                               )
+# if cfg.logging.wandb:
+#     # # DO NOT login if you want to log offline
+#     # wandb.login(key=os.environ['WANDB_API_KEY'])
+#     wandb_logger = WandbLogger(project=cfg.logging.project_name, 
+#                                offline=True
+#                                )
     
-slack_callback = utils.SlackCallback(webhook_url=os.environ['SLACK_HOOK'], 
-                                     cfg=OmegaConf.to_yaml(cfg),
-                                     server_log_file=server_log_file
-                                     )
+# slack_callback = utils.SlackCallback(webhook_url=os.environ['SLACK_HOOK'], 
+#                                      cfg=OmegaConf.to_yaml(cfg),
+#                                      server_log_file=server_log_file
+#                                      )
 
-log_name = 'lightning_logs'
-version = time.strftime("%Y-%m-%d__%H-%M")
-csv_logger = CSVLogger(cfg.logging.log_dir, name=log_name, version=version)
-# save_config_callback = SaveConfigCallback(config=cfg.logging.log_dir)
+# cfg.loggers.csv_logger.kwargs.log_name = 'lightning_logs'
+cfg.loggers.csv_logger.kwargs.version = time.strftime("%Y-%m-%d__%H-%M")
 
-# with open(os.path.join(*[cfg.logging.log_dir, log_name, version, 'config.yaml']), 'w') as f:
-#     OmegaConf.save(config=cfg, f=f)
+loggers = {}
+for logger, values in cfg.loggers.items():
+    loggers[logger] = (utils.load_obj(values.object)(**values.kwargs))
+# csv_logger = CSVLogger(cfg.logging.log_dir, name=log_name, version=version)
+
 
 print(f"Training on {len(train_df)} examples...")
 
-early_stop = EarlyStopping(cfg.callbacks.early_stopping.monitor, 
-                           patience=cfg.callbacks.early_stopping.patience, 
-                           verbose=True, 
-                           min_delta=cfg.callbacks.early_stopping.min_delta)
+# early_stop = EarlyStopping(cfg.callbacks.early_stopping.monitor, 
+#                            patience=cfg.callbacks.early_stopping.patience, 
+#                            verbose=True, 
+#                            min_delta=cfg.callbacks.early_stopping.min_delta)
 
-checkpoint_callback = ModelCheckpoint(save_top_k=cfg.callbacks.checkpoint.save_top_k, 
-                                      monitor=cfg.callbacks.checkpoint.monitor)
+# checkpoint_callback = ModelCheckpoint(save_top_k=cfg.callbacks.checkpoint.save_top_k, 
+#                                       monitor=cfg.callbacks.checkpoint.monitor)
 
-trainer = L.Trainer(max_epochs=cfg.hyperparameters.max_epochs, 
-                    profiler=cfg.hyperparameters.profiler,
-                    log_every_n_steps=100,
-                    logger=[wandb_logger, csv_logger],
-                    enable_progress_bar=False,
-                    callbacks=[ 
-                        early_stop, checkpoint_callback, 
-                        DeviceStatsMonitor(), 
-                        utils.PrintTableMetricsCallback(),
-                        slack_callback 
-                               ], # 
+
+callbacks = {}
+if cfg.callbacks.slack_callback:
+    callbacks['slack_callback'] = utils.SlackCallback(webhook_url=os.environ['SLACK_HOOK'], 
+                                     cfg=OmegaConf.to_yaml(cfg),
+                                     server_log_file=server_log_file
+                                     )
+if cfg.callbacks.print_table_metrics_callback:
+    callbacks['print_table_metrics_callback'] = utils.PrintTableMetricsCallback()
+if cfg.callbacks.device_stats_monitor_callback:
+    callbacks['device_stats_monitor_callback'] = DeviceStatsMonitor()
+
+for callback, values in cfg.callbacks.items():
+    if callback not in callbacks:
+        callbacks[callback] = (utils.load_obj(values.object)(**values.kwargs))
+
+
+
+trainer = L.Trainer(logger=list(loggers.values()),
+                    callbacks=list(callbacks.values()), 
+                    **cfg.hyperparameters.trainer
                     )
 
 classifier = models.SentimentClassifier(tokenizer=tokenizer, 
                                         hyperparams=cfg.hyperparameters)
 
 # log gradients and model topology
-wandb_logger.watch(classifier)
+if 'wandb_logger' in loggers:
+    loggers['wandb_logger'].watch(classifier)
 
 trainer.fit(classifier, train_dataloader, val_dataloader)
 
-wandb_logger.experiment.unwatch(classifier)
+if 'wandb_logger' in loggers:
+    loggers['wandb_logger'].experiment.unwatch(classifier)
+
+# Save config file to CSV log directory
+with open(os.path.join(*[cfg.loggers.csv_logger.kwargs.save_dir, 
+                         cfg.loggers.csv_logger.kwargs.name, 
+                         cfg.loggers.csv_logger.kwargs.version, 
+                         'config.yaml']), 'w') as f:
+    OmegaConf.save(config=cfg, f=f)
 
 trainer.test(classifier, dataloaders=test_dataloader)
 
-if cfg.logging.wandb:
+if 'wandb_logger' in loggers:
     # [optional] finish the wandb run, necessary in notebooks
     wandb.finish()
