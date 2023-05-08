@@ -4,13 +4,13 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 import re
+import os
 import lightning as L
 from sklearn.model_selection import train_test_split
 
 import pandas as pd
 from transformers import CanineTokenizer
-
-import multiprocessing
+from functools import partial
 
 
 def remove_urls(text):
@@ -61,19 +61,24 @@ def collate_fn(batch, input_pad_token_id=0):
 
     return {'input_ids': input_ids, 'attention_mask': attention_masks}, torch.tensor(labels)
 
+def partial_collate_fn(b, input_pad_token_id):
+    return collate_fn(b, input_pad_token_id=input_pad_token_id)
+
 
 class TweetDataModule(L.pytorch.LightningDataModule):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
         try:
-            self.num_workers = multiprocessing.cpu_count()
+            self.num_workers = int(os.environ['CPU_COUNT'])
         except:
             self.num_workers = 0
 
         # single sequence: [CLS] X [SEP]
         self.tokenizer = CanineTokenizer.from_pretrained("google/canine-c", 
                                                     return_tensors='pt')
+        
+
 
     def prepare_data(self):
         """
@@ -124,22 +129,26 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         return DataLoader(self.train_dataset, 
                               batch_size=self.cfg.hyperparameters.batch_size, 
                               shuffle=True, 
-                              collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
+                            #   collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
+                              collate_fn=partial(partial_collate_fn, input_pad_token_id=self.tokenizer.pad_token_id),
                               num_workers=self.num_workers
                               )
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.cfg.hyperparameters.batch_size, shuffle=False, 
-                          collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
+                        #   collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
+                          collate_fn=partial(partial_collate_fn, input_pad_token_id=self.tokenizer.pad_token_id),
                           num_workers=self.num_workers
                           )
         
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.cfg.hyperparameters.batch_size, shuffle=False, 
-                                     collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
+                                    #  collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
+                                    collate_fn=partial(partial_collate_fn, input_pad_token_id=self.tokenizer.pad_token_id),
                                      num_workers=self.num_workers
                                      )
+    
 
 
     # def predict_dataloader(self):
