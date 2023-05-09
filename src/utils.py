@@ -37,6 +37,7 @@ def load_obj(obj_path: str, default_obj_path: str = "", name: str = None) -> typ
     
 
 import lightning as L
+import torch
 from typing import List
 from lightning import LightningModule, Trainer
 from lightning.pytorch.utilities import rank_zero_info
@@ -65,6 +66,11 @@ class PrintTableMetricsCallback(L.pytorch.callbacks.Callback):
             rows = [self.metrics_dict.values()]
             self.metrics.append(self.metrics_dict)
             rank_zero_info(tabulate.tabulate(rows, self.metrics[0].keys()))
+
+    def on_train_step_end(trainer, pl_module, outputs, batch, batch_idx):
+        if batch_idx % 100 == 0:
+            print("TORCH MEMORY SUMMARY")
+            print(torch.cuda.memory_summary())
 
 
 
@@ -118,8 +124,9 @@ class SlackCallback(L.pytorch.callbacks.Callback):
         # Get train loss and metrics from the previous epoch
         epoch_duration = datetime.datetime.now() - self.train_epoch_start_time
         self.train_epoch_duration  = str(epoch_duration - datetime.timedelta(microseconds=epoch_duration.microseconds))
-        self.message_dict['train_loss'] = trainer.callback_metrics['train_loss']
-        self.message_dict['train_F1'] = trainer.callback_metrics['train_F1']
+        train_metrics_dict = copy.copy(trainer.callback_metrics)
+        self.message_dict['train_loss'] = train_metrics_dict['train_loss']
+        self.message_dict['train_F1'] = train_metrics_dict['train_F1']
 
 
     def on_validation_epoch_start(self, trainer, pl_module):
@@ -131,8 +138,9 @@ class SlackCallback(L.pytorch.callbacks.Callback):
         if trainer.current_epoch > 0:
             epoch_duration = datetime.datetime.now() - self.val_epoch_start_time
             self.val_epoch_duration  = str(epoch_duration - datetime.timedelta(microseconds=epoch_duration.microseconds))
-            self.message_dict['val_loss'] = trainer.callback_metrics['val_loss']
-            self.message_dict['val_F1'] = trainer.callback_metrics['val_F1']
+            val_metrics_dict = copy.copy(trainer.callback_metrics)
+            self.message_dict['val_loss'] = val_metrics_dict['val_loss']
+            self.message_dict['val_F1'] = val_metrics_dict['val_F1']
 
             payload = self.format_message_dict(trainer.current_epoch)
 

@@ -41,6 +41,9 @@ def main():
     server_log_file = args.server_log_file
 
     def set_torch_precision():
+        '''
+        This is recommended by Lightning, but causes OOM crashes when running on Vast.ai instances
+        '''
         if torch.cuda.is_available():
             # Specify the device you want to check
             device = torch.device("cuda:0")  # Change 0 to the index of your CUDA device if you have multiple GPUs
