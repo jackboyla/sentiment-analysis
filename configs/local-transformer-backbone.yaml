@@ -1,0 +1,62 @@
+seed: 42
+datafiles:
+    data_dir: 'data/training.1600000.processed.noemoticon.csv'
+    dataset_encoding: 'ISO-8859-1'
+
+data_processing:
+    train_size: 0.6
+    val_size: 0.2
+    test_size: 0.2
+
+hyperparameters:
+    backbone: 
+        object: transformer.TransformerEncoder
+        name: 'transformer'
+    batch_size: 64
+    pin_memory: True
+    lr: 1e-5
+    freeze_encoder: 0.5
+    num_classes: 2
+
+    trainer:
+        enable_progress_bar: True
+        max_epochs: 250
+        profiler: 'simple'
+        log_every_n_steps: 100
+
+
+callbacks:
+    early_stopping_callback:
+        object: lightning.pytorch.callbacks.EarlyStopping
+        kwargs:
+            patience: 5
+            verbose: True
+            min_delta: 0.05
+            monitor: 'val_loss'
+
+    checkpoint_callback:
+        object: lightning.pytorch.callbacks.ModelCheckpoint
+        kwargs:
+            save_top_k: 2
+            monitor: 'val_loss'
+
+    slack_callback: True
+
+    device_stats_monitor_callback: True
+
+    print_table_metrics_callback: True
+
+
+
+loggers:
+    wandb_logger:
+        object: lightning.pytorch.loggers.WandbLogger
+        kwargs:
+            project: 'wandb-sentiment-analysis'
+            offline: True
+
+    csv_logger: 
+        object: lightning.pytorch.loggers.CSVLogger
+        kwargs: 
+            save_dir: 'logs'
+            name: 'lightning_logs'
