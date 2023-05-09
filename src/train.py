@@ -1,9 +1,7 @@
 
-import os
-import multiprocessing
 
-os.environ['CPU_COUNT'] = str(multiprocessing.cpu_count())
-print(f"Number of CPU cores: {os.environ['CPU_COUNT']}")
+# os.environ['CPU_COUNT'] = str(multiprocessing.cpu_count())
+# print(f"Number of CPU cores: {os.environ['CPU_COUNT']}")
 
 def main():
     import importlib
@@ -28,35 +26,73 @@ def main():
     import time
     import wandb
     import argparse
+
+    import os
+    import multiprocessing
+    import psutil
+
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--cfg_path", type=str, help="Config path for training")
     parser.add_argument("--server_log_file", type=str, help="Log file for instance output")
     args = parser.parse_args()
-
-    if torch.cuda.is_available():
-        # Specify the device you want to check
-        device = torch.device("cuda:0")  # Change 0 to the index of your CUDA device if you have multiple GPUs
-
-        # Get the device properties
-        device_props = torch.cuda.get_device_properties(device)
-
-        ''' 
-            Check if the device has Tensor Cores
-            According to NVIDIA's documentation, 
-            Tensor Cores were introduced in the Volta architecture (CUDA Compute Capability 7.0 and above), 
-            so we check if the device's major version is 7 or greater and the minor version is 0 or greater.
-        '''
-        if device_props.major >= 7 and device_props.minor >= 0:
-            print("This device has Tensor Cores!\n Setting precision to medium...")
-            torch.set_float32_matmul_precision('medium')
-        else:
-            print("This device does not have Tensor Cores :(")
 
 
     cfg_path = args.cfg_path  # 'configs/local-canine-backbone.yaml'
     cfg = OmegaConf.load(cfg_path)
 
     server_log_file = args.server_log_file
+
+    def set_torch_precision():
+        if torch.cuda.is_available():
+            # Specify the device you want to check
+            device = torch.device("cuda:0")  # Change 0 to the index of your CUDA device if you have multiple GPUs
+
+            # Get the device properties
+            device_props = torch.cuda.get_device_properties(device)
+
+            ''' 
+                Check if the device has Tensor Cores
+                According to NVIDIA's documentation, 
+                Tensor Cores were introduced in the Volta architecture (CUDA Compute Capability 7.0 and above), 
+                so we check if the device's major version is 7 or greater and the minor version is 0 or greater.
+            '''
+            if device_props.major >= 7 and device_props.minor >= 0:
+                print("This device has Tensor Cores!\n Setting precision to medium...")
+                torch.set_float32_matmul_precision('medium')
+            else:
+                print("This device does not have Tensor Cores :(")
+
+    set_torch_precision()
+
+
+    def set_num_workers():
+        # Get the number of CPU cores
+        num_cpus = multiprocessing.cpu_count()
+
+        # Check the available memory
+        available_memory_gb = psutil.virtual_memory().available / 1024 / 1024 / 1024
+
+        # Determine the number of workers based on the available memory
+        # In practice a factor of 4 seems to work relatively well for Dataloader num_workers
+        if available_memory_gb < 4:
+            num_workers = 0
+        elif available_memory_gb < 8:
+            num_workers = min(num_cpus, 4)
+        else:
+            num_workers = min(num_cpus, 8)
+
+        # # Set the number of workers for PyTorch data loaders
+        # torch.set_num_threads(num_workers)
+
+        available_gpus = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
+        num_workers *= len(available_gpus)
+        print(f"num_workers assigned for DataLoader: {num_workers}")
+        
+        return num_workers
+
+    num_workers = set_num_workers()
+    cfg.hyperparameters.num_workers = num_workers
 
 
     dm = dataflow.TweetDataModule(cfg)
