@@ -60,7 +60,7 @@ def main():
             else:
                 print("This device does not have Tensor Cores :(")
 
-    set_torch_precision()
+    # set_torch_precision()
 
 
     def set_num_workers():
