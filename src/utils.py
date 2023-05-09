@@ -72,8 +72,8 @@ class PrintTableMetricsCallback(L.pytorch.callbacks.Callback):
 
     def on_train_step_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if batch_idx % 100 == 0:
-            print("TORCH MEMORY SUMMARY")
-            print(torch.cuda.memory_summary())
+            rank_zero_info("TORCH MEMORY SUMMARY")
+            rank_zero_info(torch.cuda.memory_summary())
 
 
 class SlackCallback(L.pytorch.callbacks.Callback):

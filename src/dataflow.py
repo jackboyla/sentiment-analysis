@@ -121,8 +121,6 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         if stage == "test":
             self.test_dataset = TweetDataset(self.test_df['text'], self.test_df['target'], self.tokenizer)
 
-        # if stage == "predict":
-        #     self.test_dataset = TweetDataset(self.test_df['text'], self.test_df['target'], self.tokenizer)
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, 
