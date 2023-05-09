@@ -1,6 +1,6 @@
 import typing
 import importlib
-from transformers import AutoModel
+import transformers
 import lightning as L
 import torch
 from typing import List
@@ -10,6 +10,7 @@ import tabulate
 import copy
 import requests
 import datetime
+import os
 
 # https://github.com/quantumblacklabs/kedro/blob/9809bd7ca0556531fa4a2fc02d5b2dc26cf8fa97/kedro/utils.py
 def load_obj(obj_path: str, default_obj_path: str = "", name: str = None) -> typing.Any:
@@ -28,7 +29,8 @@ def load_obj(obj_path: str, default_obj_path: str = "", name: str = None) -> typ
     
     # TO-DO: FIND MORE ELEGANT SOLUTION
     if 'transformers' in obj_path:
-        model = AutoModel.from_pretrained(name)
+        print(f"transformers cache: {os.environ['TRANSFORMERS_CACHE']}")
+        model = transformers.AutoModel.from_pretrained(name)
         return model
     else:
         obj_path_list = obj_path.rsplit(".", 1)
