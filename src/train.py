@@ -94,14 +94,15 @@ def main():
 
 
     callbacks = {}
-    if cfg.callbacks.slack_callback == True:
+    added_callbacks = set()
+    if 'slack_callback' in cfg.callbacks:
         callbacks['slack_callback'] = utils.SlackCallback(webhook_url=os.environ['SLACK_HOOK'], 
                                         cfg=OmegaConf.to_yaml(cfg),
                                         server_log_file=server_log_file
                                         )
-    if cfg.callbacks.print_table_metrics_callback == True:
+    if 'print_table_metrics_callback' in cfg.callbacks:
         callbacks['print_table_metrics_callback'] = utils.PrintTableMetricsCallback()
-    if cfg.callbacks.device_stats_monitor_callback == True:
+    if 'device_stats_monitor_callback' in cfg.callbacks:
         callbacks['device_stats_monitor_callback'] = DeviceStatsMonitor()
 
     for callback, values in cfg.callbacks.items():
