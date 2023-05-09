@@ -73,11 +73,6 @@ class PrintTableMetricsCallback(L.pytorch.callbacks.Callback):
             print(torch.cuda.memory_summary())
 
 
-
-
-
-
-
 import requests
 import datetime
 import lightning as L
