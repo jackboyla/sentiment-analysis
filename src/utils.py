@@ -67,7 +67,7 @@ class PrintTableMetricsCallback(L.pytorch.callbacks.Callback):
             self.metrics.append(self.metrics_dict)
             rank_zero_info(tabulate.tabulate(rows, self.metrics[0].keys()))
 
-    def on_train_step_end(trainer, pl_module, outputs, batch, batch_idx):
+    def on_train_step_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if batch_idx % 100 == 0:
             print("TORCH MEMORY SUMMARY")
             print(torch.cuda.memory_summary())
