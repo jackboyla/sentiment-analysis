@@ -1,6 +1,15 @@
 import typing
 import importlib
 from transformers import AutoModel
+import lightning as L
+import torch
+from typing import List
+from lightning import LightningModule, Trainer
+from lightning.pytorch.utilities import rank_zero_info
+import tabulate
+import copy
+import requests
+import datetime
 
 # https://github.com/quantumblacklabs/kedro/blob/9809bd7ca0556531fa4a2fc02d5b2dc26cf8fa97/kedro/utils.py
 def load_obj(obj_path: str, default_obj_path: str = "", name: str = None) -> typing.Any:
@@ -36,18 +45,10 @@ def load_obj(obj_path: str, default_obj_path: str = "", name: str = None) -> typ
         return getattr(module_obj, obj_name)
     
 
-import lightning as L
-import torch
-from typing import List
-from lightning import LightningModule, Trainer
-from lightning.pytorch.utilities import rank_zero_info
-import tabulate
-import copy
 
 class PrintTableMetricsCallback(L.pytorch.callbacks.Callback):
     """
-    from (https://stackoverflow.com/questions/40056747/print-a-list-
-    of-dictionaries-in-table-form)
+    from (https://stackoverflow.com/questions/40056747/print-a-list-of-dictionaries-in-table-form)
     """
 
     def __init__(self) -> None:
@@ -72,10 +73,6 @@ class PrintTableMetricsCallback(L.pytorch.callbacks.Callback):
             print("TORCH MEMORY SUMMARY")
             print(torch.cuda.memory_summary())
 
-
-import requests
-import datetime
-import lightning as L
 
 class SlackCallback(L.pytorch.callbacks.Callback):
     def __init__(self, webhook_url, cfg, server_log_file):
@@ -130,7 +127,7 @@ class SlackCallback(L.pytorch.callbacks.Callback):
 
     def on_validation_epoch_end(self, trainer, pl_module):
         # Get validation loss and metrics from the current epoch
-        if trainer.current_epoch > 0:
+        if trainer.current_epoch >= 0:
             epoch_duration = datetime.datetime.now() - self.val_epoch_start_time
             self.val_epoch_duration  = str(epoch_duration - datetime.timedelta(microseconds=epoch_duration.microseconds))
             val_metrics_dict = copy.copy(trainer.callback_metrics)

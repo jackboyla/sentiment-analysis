@@ -4,8 +4,8 @@ datafiles:
     dataset_encoding: 'ISO-8859-1'
 
 data_processing:
-    train_size: 10000
-    val_size: 5000
+    train_size: 0.6
+    val_size: 0.2
     test_size: 0.2
 
 hyperparameters:
@@ -13,6 +13,7 @@ hyperparameters:
         object: transformers.models.canine.modeling_canine.CanineModel
         name: 'google/canine-c'
     batch_size: 64
+    pin_memory: True
     lr: 1e-5
     freeze_encoder: 0.5
     num_classes: 2
