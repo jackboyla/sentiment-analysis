@@ -1,8 +1,5 @@
 
 
-# os.environ['CPU_COUNT'] = str(multiprocessing.cpu_count())
-# print(f"Number of CPU cores: {os.environ['CPU_COUNT']}")
-
 def main():
     import importlib
     import sys

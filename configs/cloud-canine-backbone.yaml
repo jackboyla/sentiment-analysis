@@ -18,7 +18,7 @@ hyperparameters:
     num_classes: 2
 
     trainer:
-        enable_progress_bar: False
+        enable_progress_bar: True
         max_epochs: 250
         profiler: 'simple'
         log_every_n_steps: 100
