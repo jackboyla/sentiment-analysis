@@ -150,11 +150,4 @@ class TweetDataModule(L.pytorch.LightningDataModule):
                                      )
     
 
-
-    # def predict_dataloader(self):
-    #     return DataLoader(self.test_dataset, batch_size=self.cfg.hyperparameters.batch_size, shuffle=False, 
-    #                                  collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
-    #                                  num_workers=self.num_workers
-    #                                  )
-
     
