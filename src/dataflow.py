@@ -70,6 +70,7 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         super().__init__()
         self.cfg = cfg
         self.num_workers = self.cfg.hyperparameters.num_workers
+        self.pin_memory = self.cfg.hyperparameters.pin_memory
 
 
         # single sequence: [CLS] X [SEP]
@@ -129,14 +130,16 @@ class TweetDataModule(L.pytorch.LightningDataModule):
                               shuffle=True, 
                             #   collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
                               collate_fn=partial(partial_collate_fn, input_pad_token_id=self.tokenizer.pad_token_id),
-                              num_workers=self.num_workers
+                              num_workers=self.num_workers,
+                              pin_memory=self.pin_memory
                               )
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.cfg.hyperparameters.batch_size, shuffle=False, 
                         #   collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
                           collate_fn=partial(partial_collate_fn, input_pad_token_id=self.tokenizer.pad_token_id),
-                          num_workers=self.num_workers
+                          num_workers=self.num_workers,
+                          pin_memory=self.pin_memory
                           )
         
 
@@ -144,7 +147,8 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         return DataLoader(self.test_dataset, batch_size=self.cfg.hyperparameters.batch_size, shuffle=False, 
                                     #  collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
                                     collate_fn=partial(partial_collate_fn, input_pad_token_id=self.tokenizer.pad_token_id),
-                                     num_workers=self.num_workers
+                                     num_workers=self.num_workers,
+                                     pin_memory=self.pin_memory
                                      )
     
 
