@@ -69,10 +69,8 @@ class TweetDataModule(L.pytorch.LightningDataModule):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        try:
-            self.num_workers = int(os.environ['CPU_COUNT'])
-        except:
-            self.num_workers = 0
+        self.num_workers = self.cfg.hyperparameters.num_workers
+
 
         # single sequence: [CLS] X [SEP]
         self.tokenizer = CanineTokenizer.from_pretrained("google/canine-c", 
