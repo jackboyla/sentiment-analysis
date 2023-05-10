@@ -129,7 +129,7 @@ class SlackCallback(L.pytorch.callbacks.Callback):
 
     def on_validation_epoch_end(self, trainer, pl_module):
         # Get validation loss and metrics from the current epoch
-        if trainer.current_epoch >= 0:
+        if trainer.state.stage != 'sanity_check':
             epoch_duration = datetime.datetime.now() - self.val_epoch_start_time
             self.val_epoch_duration  = str(epoch_duration - datetime.timedelta(microseconds=epoch_duration.microseconds))
             val_metrics_dict = copy.copy(trainer.callback_metrics)

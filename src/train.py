@@ -76,18 +76,23 @@ def main():
 
         available_gpus = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
         num_workers *= len(available_gpus)
-        print(f"num_workers assigned for DataLoader: {num_workers}")
         
         return num_workers
 
     if 'num_workers' not in cfg.hyperparameters:
         num_workers = set_num_workers()
         cfg.hyperparameters.num_workers = num_workers
+    print(f"num_workers assigned for DataLoader: {cfg.hyperparameters.num_workers}")
 
 
     dm = dataflow.TweetDataModule(cfg)
 
     cfg.loggers.csv_logger.kwargs.version = time.strftime("%Y-%m-%d__%H-%M")
+
+    if 'wandb_logger' in loggers:
+        wandb_logging = True
+        if cfg.loggers.wandb_logger.kargs.offline == False:
+            wandb.login(key=os.environ['WANDB_API_KEY'])
 
     loggers = {}
     for logger, values in cfg.loggers.items():
@@ -95,7 +100,6 @@ def main():
 
 
     callbacks = {}
-    added_callbacks = set()
     if 'slack_callback' in cfg.callbacks:
         callbacks['slack_callback'] = utils.SlackCallback(webhook_url=os.environ['SLACK_HOOK'], 
                                         cfg=OmegaConf.to_yaml(cfg),
@@ -121,12 +125,12 @@ def main():
                                             hyperparams=cfg.hyperparameters)
 
     # log gradients and model topology
-    if 'wandb_logger' in loggers:
+    if wandb_logging:
         loggers['wandb_logger'].watch(classifier)
 
     trainer.fit(classifier, datamodule=dm)
 
-    if 'wandb_logger' in loggers:
+    if wandb_logging:
         loggers['wandb_logger'].experiment.unwatch(classifier)
 
     # Save config file to CSV log directory
