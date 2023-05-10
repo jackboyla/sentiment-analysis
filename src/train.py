@@ -91,7 +91,7 @@ def main():
 
     if 'wandb_logger' in cfg.loggers:
         wandb_logging = True
-        if cfg.loggers.wandb_logger.kargs.offline == False:
+        if cfg.loggers.wandb_logger.kwargs.offline == False:
             wandb.login(key=os.environ['WANDB_API_KEY'])
 
     loggers = {}
