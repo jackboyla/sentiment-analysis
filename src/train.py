@@ -89,7 +89,7 @@ def main():
 
     cfg.loggers.csv_logger.kwargs.version = time.strftime("%Y-%m-%d__%H-%M")
 
-    if 'wandb_logger' in loggers:
+    if 'wandb_logger' in cfg.loggers:
         wandb_logging = True
         if cfg.loggers.wandb_logger.kargs.offline == False:
             wandb.login(key=os.environ['WANDB_API_KEY'])
