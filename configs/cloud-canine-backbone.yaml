@@ -17,7 +17,7 @@ hyperparameters:
     lr: 1e-5
     freeze_encoder: 0.5
     num_classes: 2
-    num_workers: 2
+    num_workers: 0
 
     trainer:
         accelerator: 'gpu'
@@ -42,11 +42,11 @@ callbacks:
             save_top_k: 2
             monitor: 'val_loss'
 
-    slack_callback: True
+    # slack_callback: True
 
     device_stats_monitor_callback: True
 
-    print_table_metrics_callback: True
+    # print_table_metrics_callback: True
 
 
 
