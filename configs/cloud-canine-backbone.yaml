@@ -55,7 +55,7 @@ loggers:
         object: lightning.pytorch.loggers.WandbLogger
         kwargs:
             project: 'wandb-sentiment-analysis'
-            offline: True
+            offline: False
 
     csv_logger: 
         object: lightning.pytorch.loggers.CSVLogger
