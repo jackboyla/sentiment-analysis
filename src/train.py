@@ -80,8 +80,9 @@ def main():
         
         return num_workers
 
-    num_workers = set_num_workers()
-    cfg.hyperparameters.num_workers = num_workers
+    if 'num_workers' not in cfg.hyperparameters:
+        num_workers = set_num_workers()
+        cfg.hyperparameters.num_workers = num_workers
 
 
     dm = dataflow.TweetDataModule(cfg)
