@@ -57,8 +57,8 @@ loggers:
             project: 'wandb-sentiment-analysis'
             offline: False
 
-    csv_logger: 
-        object: lightning.pytorch.loggers.CSVLogger
-        kwargs: 
-            save_dir: 'logs'
-            name: 'lightning_logs'
+    # csv_logger: 
+    #     object: lightning.pytorch.loggers.CSVLogger
+    #     kwargs: 
+    #         save_dir: 'logs'
+    #         name: 'lightning_logs'
