@@ -126,8 +126,6 @@ def main():
     from lightning.pytorch.profilers import PyTorchProfiler
 
     pytorch_profiler = PyTorchProfiler(
-                                       dirpath='data/', 
-                                       filename='pytorch_profiler', 
                                        profile_memory = True, 
                                        sort_by_key='cuda_memory_usage',
                                     #    with_stack = True
@@ -138,7 +136,7 @@ def main():
     # TRAIN
 
     trainer = L.Trainer(logger=list(loggers.values()),
-                        # callbacks=list(callbacks.values()),
+                        callbacks=list(callbacks.values()),
                         profiler=pytorch_profiler,
                         **cfg.hyperparameters.trainer
                         )

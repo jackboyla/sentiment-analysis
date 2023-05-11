@@ -30,23 +30,23 @@ hyperparameters:
 callbacks:
     slack_callback: True
 
-    # device_stats_monitor_callback: True
+    device_stats_monitor_callback: True
 
-    # print_table_metrics_callback: True
+    print_table_metrics_callback: True
     
-#     early_stopping_callback:
-#         object: lightning.pytorch.callbacks.EarlyStopping
-#         kwargs:
-#             patience: 5
-#             verbose: True
-#             min_delta: 0.05
-#             monitor: 'val_loss'
+    early_stopping_callback:
+        object: lightning.pytorch.callbacks.EarlyStopping
+        kwargs:
+            patience: 5
+            verbose: True
+            min_delta: 0.05
+            monitor: 'val_loss'
 
-    # checkpoint_callback:
-    #     object: lightning.pytorch.callbacks.ModelCheckpoint
-    #     kwargs:
-    #         save_top_k: 2
-    #         monitor: 'val_loss'
+    checkpoint_callback:
+        object: lightning.pytorch.callbacks.ModelCheckpoint
+        kwargs:
+            save_top_k: 2
+            monitor: 'val_loss'
 
 
 
