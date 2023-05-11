@@ -22,8 +22,8 @@ hyperparameters:
     trainer:
         accelerator: 'gpu'
         enable_progress_bar: True
-        max_epochs: 250
-        profiler: 'simple'
+        max_epochs: 1
+        # profiler: 'simple'
         log_every_n_steps: 100
 
 
@@ -44,7 +44,7 @@ callbacks:
 
     # slack_callback: True
 
-    device_stats_monitor_callback: True
+    # device_stats_monitor_callback: True
 
     # print_table_metrics_callback: True
 

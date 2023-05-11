@@ -87,12 +87,13 @@ def main():
 
     dm = dataflow.TweetDataModule(cfg)
 
-    cfg.loggers.csv_logger.kwargs.version = time.strftime("%Y-%m-%d__%H-%M")
-
     if 'wandb_logger' in cfg.loggers:
         wandb_logging = True
         if cfg.loggers.wandb_logger.kwargs.offline == False:
             wandb.login(key=os.environ['WANDB_API_KEY'])
+
+    if 'csv_logger' in cfg.loggers:
+        cfg.loggers.csv_logger.kwargs.version = time.strftime("%Y-%m-%d__%H-%M")
 
     loggers = {}
     for logger, values in cfg.loggers.items():
@@ -115,9 +116,14 @@ def main():
             callbacks[callback] = (utils.load_obj(values.object)(**values.kwargs))
 
 
+    from lightning.pytorch.profilers import PyTorchProfiler
+
+    pytorch_profiler = PyTorchProfiler(profile_memory = True)
+
 
     trainer = L.Trainer(logger=list(loggers.values()),
-                        callbacks=list(callbacks.values()), 
+                        callbacks=list(callbacks.values()),
+                        profiler=pytorch_profiler,
                         **cfg.hyperparameters.trainer
                         )
 
