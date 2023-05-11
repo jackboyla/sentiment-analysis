@@ -138,7 +138,7 @@ def main():
     # TRAIN
 
     trainer = L.Trainer(logger=list(loggers.values()),
-                        callbacks=list(callbacks.values()),
+                        # callbacks=list(callbacks.values()),
                         profiler=pytorch_profiler,
                         **cfg.hyperparameters.trainer
                         )
