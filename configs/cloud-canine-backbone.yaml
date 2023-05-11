@@ -27,7 +27,13 @@ hyperparameters:
         log_every_n_steps: 100
 
 
-# callbacks:
+callbacks:
+    slack_callback: True
+
+    # device_stats_monitor_callback: True
+
+    # print_table_metrics_callback: True
+    
 #     early_stopping_callback:
 #         object: lightning.pytorch.callbacks.EarlyStopping
 #         kwargs:
@@ -41,12 +47,6 @@ hyperparameters:
     #     kwargs:
     #         save_top_k: 2
     #         monitor: 'val_loss'
-
-    # slack_callback: True
-
-    # device_stats_monitor_callback: True
-
-    # print_table_metrics_callback: True
 
 
 
