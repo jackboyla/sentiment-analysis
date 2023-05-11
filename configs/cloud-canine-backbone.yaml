@@ -27,20 +27,20 @@ hyperparameters:
         log_every_n_steps: 100
 
 
-callbacks:
-    early_stopping_callback:
-        object: lightning.pytorch.callbacks.EarlyStopping
-        kwargs:
-            patience: 5
-            verbose: True
-            min_delta: 0.05
-            monitor: 'val_loss'
+# callbacks:
+#     early_stopping_callback:
+#         object: lightning.pytorch.callbacks.EarlyStopping
+#         kwargs:
+#             patience: 5
+#             verbose: True
+#             min_delta: 0.05
+#             monitor: 'val_loss'
 
-    checkpoint_callback:
-        object: lightning.pytorch.callbacks.ModelCheckpoint
-        kwargs:
-            save_top_k: 2
-            monitor: 'val_loss'
+    # checkpoint_callback:
+    #     object: lightning.pytorch.callbacks.ModelCheckpoint
+    #     kwargs:
+    #         save_top_k: 2
+    #         monitor: 'val_loss'
 
     # slack_callback: True
 
