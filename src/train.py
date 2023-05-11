@@ -118,7 +118,10 @@ def main():
 
     from lightning.pytorch.profilers import PyTorchProfiler
 
-    pytorch_profiler = PyTorchProfiler(profile_memory = True)
+    pytorch_profiler = PyTorchProfiler(dirpath='logs', 
+                                       filename='pytorch_profiler.log', 
+                                       profile_memory = True, 
+                                       with_stack = True)
 
 
     trainer = L.Trainer(logger=list(loggers.values()),
