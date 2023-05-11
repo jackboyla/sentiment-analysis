@@ -2,6 +2,7 @@ import torch, torch.nn as nn
 import torchmetrics
 import lightning.pytorch as pl
 import utils
+import transformers
 
 
 
@@ -15,7 +16,13 @@ class SentimentClassifier(pl.LightningModule):
         self.lr = self.cfg.lr
 
         # Load Backbone
-        self.encoder = utils.load_obj(self.cfg.backbone.object, name=self.cfg.backbone.name)
+        if 'transformers' in self.cfg.backbone.object:
+            self.encoder = transformers.AutoModel.from_pretrained(self.cfg.backbone.name)
+            self.hidden_size = self.encoder.config.hidden_size
+        else:
+            self.encoder = utils.load_obj(self.cfg.backbone.object, name=self.cfg.backbone.name)
+            self.encoder = self.encoder(input_size=self.tokenizer.vocab_size, **self.cfg.backbone.kwargs)
+            self.hidden_size = self.encoder.hidden_size
 
         # Freeze encoder if sepcified
         if self.cfg.freeze_encoder:
@@ -31,10 +38,9 @@ class SentimentClassifier(pl.LightningModule):
 
 
         # Dropout
-        self.dropout = nn.Dropout(self.encoder.config.hidden_dropout_prob) # 0.1 for canine-c
+        self.dropout = nn.Dropout(0.1) # 0.1 for canine-c
 
         # Define Classifier Head
-        self.hidden_size = self.encoder.config.hidden_size
         self.num_classes = self.cfg.num_classes
         self.classifier_head = nn.Sequential(
             nn.Linear(self.hidden_size, self.hidden_size),
