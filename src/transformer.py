@@ -4,7 +4,7 @@ import torch.nn as nn
 import math
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, embedding_dim, max_seq_len=200):
+    def __init__(self, embedding_dim, max_seq_len=5000):
         super().__init__()
         self.dropout = nn.Dropout(p=0.1)
         self.embedding_dim = embedding_dim
@@ -45,16 +45,16 @@ class TransformerEncoder(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.hidden_size = hidden_size
         
-    def forward(self, x):
-        x = self.embedding(x)
+    def forward(self, input_ids, attention_mask, output_hidden_states=True):
+        x = self.embedding(input_ids)
         x = self.pos_encoder(x)
-        x = x.permute(1, 0, 2)
+        x = x.permute(1, 0, 2) # switch batch_size and sequence_length dimensions
         x = self.transformer_encoder(x)
-        x = x.permute(1, 0, 2)
+        x = x.permute(1, 0, 2) # switch back
         x = x.mean(dim=1)
         x = self.dropout(x)
         # x = self.fc(x)
-        return x
+        return {'pooler_output': x}
 
 
         
