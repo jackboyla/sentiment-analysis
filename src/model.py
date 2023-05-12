@@ -36,7 +36,6 @@ class SentimentClassifier(pl.LightningModule):
                 i += 1
             print(f"Frozen the first {total_frozen_params} out of {total_params} encoder weights")
 
-
         # Dropout
         self.dropout = nn.Dropout(0.1) # 0.1 for canine-c
 
@@ -55,9 +54,8 @@ class SentimentClassifier(pl.LightningModule):
   
         self.train_f1 = torchmetrics.F1Score(task="multiclass", num_classes=self.num_classes)
         self.val_f1 = torchmetrics.F1Score(task="multiclass", num_classes=self.num_classes)
+        self.test_f1 = torchmetrics.F1Score(task="multiclass", num_classes=self.num_classes)
 
-        # save hyper-parameters to self.hparamsm auto-logged by wandb
-        self.save_hyperparameters()
 
     def get_logits(self, inputs):
         encoder_output = self.encoder(**inputs, output_hidden_states=True) 
@@ -84,9 +82,9 @@ class SentimentClassifier(pl.LightningModule):
         loss = self.criterion(logits, labels)
         self.train_acc(logits, labels)
         self.train_f1(logits, labels)
-        self.log("train_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
-        self.log('train_acc', self.train_acc, on_step=True, on_epoch=True)
-        self.log('train_F1', self.train_f1, on_step=True, on_epoch=True)
+        self.log("train_loss", loss, prog_bar=True)
+        self.log('train_acc', self.train_acc)
+        self.log('train_F1', self.train_f1)
         return loss
     
     def validation_step(self, batch, batch_idx):
@@ -96,14 +94,16 @@ class SentimentClassifier(pl.LightningModule):
         self.val_acc(logits, labels)
         self.val_f1(logits, labels)
         self.log("val_loss", val_loss)
-        self.log('val_acc', self.val_acc, on_step=False, on_epoch=True)
-        self.log('val_F1', self.val_f1, on_step=False, on_epoch=True)
+        self.log('val_acc', self.val_acc)
+        self.log('val_F1', self.val_f1)
 
     def test_step(self, batch, batch_idx):
         inputs, labels = batch
         logits = self.get_logits(inputs)
         test_loss = self.criterion(logits, labels)
+        self.test_f1(logits, labels)
         self.log("test_loss", test_loss)
+        self.log('test_F1', self.test_f1)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
