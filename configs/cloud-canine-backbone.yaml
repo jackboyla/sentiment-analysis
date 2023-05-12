@@ -24,13 +24,11 @@ hyperparameters:
         enable_progress_bar: True
         max_epochs: 250
         # profiler: 'simple'
-        log_every_n_steps: 100
+        log_every_n_steps: 300
 
 
 callbacks:
     slack_callback: True
-
-    device_stats_monitor_callback: True
 
     print_table_metrics_callback: True
     
@@ -39,7 +37,7 @@ callbacks:
         kwargs:
             patience: 5
             verbose: True
-            min_delta: 0.05
+            min_delta: 0.005
             monitor: 'val_loss'
 
     checkpoint_callback:
@@ -49,13 +47,13 @@ callbacks:
             monitor: 'val_loss'
 
 
-
 loggers:
     wandb_logger:
         object: lightning.pytorch.loggers.WandbLogger
         kwargs:
             project: 'wandb-sentiment-analysis'
             offline: False
+            log_model: True
 
     # csv_logger: 
     #     object: lightning.pytorch.loggers.CSVLogger
