@@ -28,10 +28,11 @@ def main():
     cfg = OmegaConf.load(cfg_path)
 
     server_log_file = args.server_log_file
+    cfg.datafiles.server_log_file = server_log_file
 
     def set_torch_precision():
         '''
-        This is recommended by Lightning, but causes OOM crashes when running on Vast.ai instances
+        This is recommended by Lightning
         '''
         if torch.cuda.is_available():
             # Specify the device you want to check
@@ -85,54 +86,61 @@ def main():
     print(f"num_workers assigned for DataLoader: {cfg.hyperparameters.num_workers}")
 
 
-    # -------------------------------------------------
+    # -----------------------------------------------------------------------
     # DATA
 
     dm = dataflow.TweetDataModule(cfg)
 
-    # --------------------------------------------------
-    # LOGGERS AND CALLBACKS
+    # ---------------------------------------------------------------------
+    # LOGGERS
 
-    if 'wandb_logger' in cfg.loggers:
-        wandb_logging = True
-        if cfg.loggers.wandb_logger.kwargs.offline == False:
-            wandb.login(key=os.environ['WANDB_API_KEY'])
+    if 'loggers' in cfg:
+        loggers = {}
+        if 'wandb_logger' in cfg.loggers:
+            wandb_logging = True
+            if cfg.loggers.wandb_logger.kwargs.offline == False:
+                wandb.login(key=os.environ['WANDB_API_KEY'])
 
-    if 'csv_logger' in cfg.loggers:
-        cfg.loggers.csv_logger.kwargs.version = time.strftime("%Y-%m-%d__%H-%M")
+        if 'csv_logger' in cfg.loggers:
+            cfg.loggers.csv_logger.kwargs.version = time.strftime("%Y-%m-%d__%H-%M")
 
-    loggers = {}
-    for logger, values in cfg.loggers.items():
-        loggers[logger] = (utils.load_obj(values.object)(**values.kwargs))
 
+        for logger, values in cfg.loggers.items():
+            if logger not in loggers:
+                loggers[logger] = (utils.load_obj(values.object)(**values.kwargs))
+
+        if wandb_logging:
+            loggers['wandb_logger'].experiment.config.update(cfg)
+
+    # ---------------------------------------------------------------------
+    # CALLBACKS
 
     if 'callbacks' in cfg:
         callbacks = {}
         if 'slack_callback' in cfg.callbacks:
-            callbacks['slack_callback'] = utils.SlackCallback(webhook_url=os.environ['SLACK_HOOK'], 
-                                            cfg=OmegaConf.to_yaml(cfg),
-                                            server_log_file=server_log_file
-                                            )
+            if cfg.callbacks.slack_callback:
+                callbacks['slack_callback'] = utils.SlackCallback(cfg=OmegaConf.to_yaml(cfg),
+                                                                server_log_file=server_log_file
+                                                                )
         if 'print_table_metrics_callback' in cfg.callbacks:
-            callbacks['print_table_metrics_callback'] = utils.PrintTableMetricsCallback()
-        if 'device_stats_monitor_callback' in cfg.callbacks:
-            callbacks['device_stats_monitor_callback'] = DeviceStatsMonitor()
+            if cfg.callbacks.print_table_metrics_callback:
+                callbacks['print_table_metrics_callback'] = utils.PrintTableMetricsCallback()
 
         for callback, values in cfg.callbacks.items():
             if callback not in callbacks:
                 callbacks[callback] = (utils.load_obj(values.object)(**values.kwargs))
 
 
+    # -----------------------------------------------------------------------
+    # PROFILER
     from lightning.pytorch.profilers import PyTorchProfiler
 
-    pytorch_profiler = PyTorchProfiler(
-                                       profile_memory = True, 
+    pytorch_profiler = PyTorchProfiler(profile_memory = True, 
                                        sort_by_key='cuda_memory_usage',
-                                    #    with_stack = True
                                        )
 
 
-    # ----------------------------
+    # -----------------------------------------------------
     # TRAIN
 
     trainer = L.Trainer(logger=list(loggers.values()),
@@ -144,14 +152,14 @@ def main():
     classifier = models.SentimentClassifier(tokenizer=dm.tokenizer, 
                                             hyperparams=cfg.hyperparameters)
 
-    # # log gradients and model topology
-    # if wandb_logging:
-    #     loggers['wandb_logger'].watch(classifier)
+    # log gradients and model topology
+    if wandb_logging:
+        loggers['wandb_logger'].watch(classifier)
 
     trainer.fit(classifier, datamodule=dm)
 
-    # if wandb_logging:
-    #     loggers['wandb_logger'].experiment.unwatch(classifier)
+    if wandb_logging:
+        loggers['wandb_logger'].experiment.unwatch(classifier)
 
     # # Save config file to CSV log directory
     # with open(os.path.join(*[cfg.loggers.csv_logger.kwargs.save_dir, 

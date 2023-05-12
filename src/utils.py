@@ -71,9 +71,9 @@ class PrintTableMetricsCallback(L.pytorch.callbacks.Callback):
 
 
 class SlackCallback(L.pytorch.callbacks.Callback):
-    def __init__(self, webhook_url, cfg, server_log_file):
+    def __init__(self, cfg, server_log_file):
         super().__init__()
-        self.webhook_url = webhook_url
+        self.webhook_url = os.environ['SLACK_HOOK']
         self.message_dict = {}
         self.train_epoch_duration = None
         self.val_epoch_duration = None
@@ -81,6 +81,7 @@ class SlackCallback(L.pytorch.callbacks.Callback):
         self.server_log_file = server_log_file
     
     def on_train_start(self, trainer, pl_module):
+        self.train_epoch_start_time = datetime.datetime.now()
         attachment = [
             {
                 "color": "#36a64f",
@@ -103,7 +104,7 @@ class SlackCallback(L.pytorch.callbacks.Callback):
         }
         self.post_to_slack(payload)
 
-    
+
     def on_train_epoch_start(self, trainer, pl_module):
         self.train_epoch_start_time = datetime.datetime.now()
             
