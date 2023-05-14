@@ -5,7 +5,6 @@ import utils
 import transformers
 
 
-
 class SentimentClassifier(pl.LightningModule):
     def __init__(self, tokenizer, hyperparams):
         super().__init__()
@@ -17,10 +16,10 @@ class SentimentClassifier(pl.LightningModule):
 
         # Load Backbone
         if 'transformers' in self.cfg.backbone.object:
-            self.encoder = transformers.AutoModel.from_pretrained(self.cfg.backbone.name)
+            self.encoder = transformers.AutoModel.from_pretrained(**self.cfg.backbone.kwargs)
             self.hidden_size = self.encoder.config.hidden_size
         else:
-            self.encoder = utils.load_obj(self.cfg.backbone.object, name=self.cfg.backbone.name)
+            self.encoder = utils.load_obj(self.cfg.backbone.object)
             self.encoder = self.encoder(input_size=self.tokenizer.vocab_size, **self.cfg.backbone.kwargs)
             self.hidden_size = self.encoder.hidden_size
 
@@ -82,7 +81,7 @@ class SentimentClassifier(pl.LightningModule):
         loss = self.criterion(logits, labels)
         self.train_acc(logits, labels)
         self.train_f1(logits, labels)
-        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_loss", loss)
         self.log('train_acc', self.train_acc)
         self.log('train_F1', self.train_f1)
         return loss
