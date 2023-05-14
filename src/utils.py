@@ -1,8 +1,6 @@
 import typing
 import importlib
-import transformers
 import lightning as L
-import torch
 from typing import List
 from lightning import LightningModule, Trainer
 from lightning.pytorch.utilities import rank_zero_info
@@ -44,7 +42,11 @@ def load_obj(obj_path: str, default_obj_path: str = "", name: str = None) -> typ
 
 class PrintTableMetricsCallback(L.pytorch.callbacks.Callback):
     """
-    from (https://stackoverflow.com/questions/40056747/print-a-list-of-dictionaries-in-table-form)
+    Print a table of *epoch-level* metrics
+    Refer to here: https://github.com/Lightning-AI/lightning/discussions/7722#discussioncomment-787435
+    for info on the difference between values sent to trainer.callback_metrics and trainer.logger_metrics
+    
+    (Tabulate: https://stackoverflow.com/questions/40056747/print-a-list-of-dictionaries-in-table-form)
     """
 
     def __init__(self) -> None:
@@ -55,19 +57,10 @@ class PrintTableMetricsCallback(L.pytorch.callbacks.Callback):
         metrics_dict = copy.copy(trainer.callback_metrics)
         # rows =  [x.values() for x in metrics_dict]
         self.metrics_dict = metrics_dict
-
-    def on_validation_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
-        if self.metrics_dict:
-            val_metrics_dict = copy.copy(trainer.callback_metrics)
-            self.metrics_dict.update(val_metrics_dict)
-            rows = [self.metrics_dict.values()]
-            self.metrics.append(self.metrics_dict)
-            rank_zero_info(tabulate.tabulate(rows, self.metrics[0].keys()))
-
-    def on_train_step_end(self, trainer, pl_module, outputs, batch, batch_idx):
-        if batch_idx % 100 == 0:
-            rank_zero_info("TORCH MEMORY SUMMARY")
-            rank_zero_info(torch.cuda.memory_summary())
+        self.metrics_dict['epoch'] = trainer.current_epoch
+        rows = [self.metrics_dict.values()]
+        self.metrics.append(self.metrics_dict)
+        rank_zero_info(tabulate.tabulate(rows, self.metrics[0].keys()))
 
 
 class SlackCallback(L.pytorch.callbacks.Callback):
@@ -110,12 +103,22 @@ class SlackCallback(L.pytorch.callbacks.Callback):
             
 
     def on_train_epoch_end(self, trainer, pl_module):
-        # Get train loss and metrics from the previous epoch
-        epoch_duration = datetime.datetime.now() - self.train_epoch_start_time
-        self.train_epoch_duration  = str(epoch_duration - datetime.timedelta(microseconds=epoch_duration.microseconds))
-        train_metrics_dict = copy.copy(trainer.callback_metrics)
-        self.message_dict['train_loss'] = train_metrics_dict['train_loss']
-        self.message_dict['train_F1'] = train_metrics_dict['train_F1']
+        if trainer.state.stage != 'sanity_check':
+            self.train_epoch_duration = datetime.datetime.now() - self.train_epoch_start_time
+            self.train_epoch_duration = str(self.train_epoch_duration - datetime.timedelta(microseconds=self.train_epoch_duration.microseconds))
+            
+            metrics_dict = copy.copy(trainer.callback_metrics)
+            self.message_dict['train_loss'] = metrics_dict['train_loss']
+            self.message_dict['train_F1'] = metrics_dict['train_F1']
+            self.message_dict['train_acc'] = metrics_dict['train_acc']
+            self.message_dict['val_loss'] = metrics_dict['val_loss']
+            self.message_dict['val_F1'] = metrics_dict['val_F1']
+            self.message_dict['val_acc'] = metrics_dict['val_acc']
+
+            payload = self.format_message_dict(trainer.current_epoch)
+
+            # Send the message to Slack using the webhook URL
+            self.post_to_slack(payload)
 
 
     def on_validation_epoch_start(self, trainer, pl_module):
@@ -123,18 +126,8 @@ class SlackCallback(L.pytorch.callbacks.Callback):
 
 
     def on_validation_epoch_end(self, trainer, pl_module):
-        # Get validation loss and metrics from the current epoch
-        if trainer.state.stage != 'sanity_check':
-            epoch_duration = datetime.datetime.now() - self.val_epoch_start_time
-            self.val_epoch_duration  = str(epoch_duration - datetime.timedelta(microseconds=epoch_duration.microseconds))
-            val_metrics_dict = copy.copy(trainer.callback_metrics)
-            self.message_dict['val_loss'] = val_metrics_dict['val_loss']
-            self.message_dict['val_F1'] = val_metrics_dict['val_F1']
-
-            payload = self.format_message_dict(trainer.current_epoch)
-
-            # Send the message to Slack using the webhook URL
-            self.post_to_slack(payload)
+        self.val_epoch_duration = datetime.datetime.now() - self.val_epoch_start_time
+        self.val_epoch_duration  = str(self.val_epoch_duration  - datetime.timedelta(microseconds=self.val_epoch_duration.microseconds))
 
 
     def on_train_end(self, trainer, pl_module):
