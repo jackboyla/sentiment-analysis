@@ -4,12 +4,12 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 import re
-import os
+import utils
 import lightning as L
 from sklearn.model_selection import train_test_split
 
 import pandas as pd
-from transformers import CanineTokenizer
+from transformers import AutoTokenizer
 from functools import partial
 
 
@@ -73,9 +73,11 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         self.pin_memory = self.cfg.hyperparameters.pin_memory
 
 
-        # single sequence: [CLS] X [SEP]
-        self.tokenizer = CanineTokenizer.from_pretrained("google/canine-c", 
-                                                    return_tensors='pt')
+        if 'transformers' in cfg.data_processing.tokenizer.object:
+            # single sequence: [CLS] X [SEP]
+            self.tokenizer = AutoTokenizer.from_pretrained(**self.cfg.data_processing.tokenizer.kwargs)
+        else:
+            self.tokenizer = utils.load_obj(self.cfg.data_processing.tokenizer.object)
         
 
 
