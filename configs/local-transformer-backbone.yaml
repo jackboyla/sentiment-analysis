@@ -4,6 +4,11 @@ datafiles:
     dataset_encoding: 'ISO-8859-1'
 
 data_processing:
+    tokenizer:
+        object: transformers.CanineTokenizer.from_pretrained
+        kwargs: 
+            pretrained_model_name_or_path: 'google/canine-c'
+            return_tensors: 'pt'
     train_size: 0.6
     val_size: 0.2
     test_size: 0.2
@@ -11,7 +16,6 @@ data_processing:
 hyperparameters:
     backbone: 
         object: transformer.TransformerEncoder
-        name: 'transformer'
         kwargs: 
             hidden_size: 32
             num_layers: 4
@@ -19,15 +23,17 @@ hyperparameters:
             dropout: 0.1
     batch_size: 64
     pin_memory: True
-    lr: 1e-5
+    lr: 1e-4
     freeze_encoder: 0
     num_classes: 2
 
     trainer:
-        enable_progress_bar: True
+        accelerator: 'auto'
+        enable_progress_bar: False
+        precision: '16-mixed'
         max_epochs: 250
         profiler: 'simple'
-        log_every_n_steps: 100
+        log_every_n_steps: 500
 
 
 callbacks:
@@ -47,8 +53,6 @@ callbacks:
 
     slack_callback: True
 
-    device_stats_monitor_callback: True
-
     print_table_metrics_callback: True
 
 
@@ -58,10 +62,10 @@ loggers:
         object: lightning.pytorch.loggers.WandbLogger
         kwargs:
             project: 'wandb-sentiment-analysis'
-            offline: True
+            offline: False
 
-    csv_logger: 
-        object: lightning.pytorch.loggers.CSVLogger
-        kwargs: 
-            save_dir: 'logs'
-            name: 'lightning_logs'
+    # csv_logger: 
+    #     object: lightning.pytorch.loggers.CSVLogger
+    #     kwargs: 
+    #         save_dir: 'logs'
+    #         name: 'lightning_logs'

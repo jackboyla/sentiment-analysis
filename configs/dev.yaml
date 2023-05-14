@@ -3,51 +3,55 @@ datafiles:
     data_dir: 'data/training.1600000.processed.noemoticon.csv'
     dataset_encoding: 'ISO-8859-1'
 
-data_processing:
+data_processing: ###
+    tokenizer:
+        object: transformers.CanineTokenizer.from_pretrained
+        kwargs: 
+            pretrained_model_name_or_path: 'google/canine-c'
+            return_tensors: 'pt'
     train_size: 1000
-    val_size: 0.2
+    val_size: 200
     test_size: 0.2
 
 hyperparameters:
     backbone: 
         object: transformers.models.canine.modeling_canine.CanineModel
-        name: 'google/canine-c'
-    batch_size: 64
+        kwargs: 
+            pretrained_model_name_or_path: 'google/canine-c'
+    batch_size: 16 #####
     pin_memory: True
     lr: 1e-5
-    freeze_encoder: 0.5
+    freeze_encoder: 1 ###
     num_classes: 2
-    num_workers: 2
+    num_workers: 0
 
     trainer:
-        accelerator: 'gpu'
-        enable_progress_bar: True
+        accelerator: 'auto'
+        enable_progress_bar: False ###
+        precision: '16-mixed'
         max_epochs: 250
         profiler: 'simple'
-        log_every_n_steps: 30
+        log_every_n_steps: 25 ####
 
 
 callbacks:
-    early_stopping_callback:
-        object: lightning.pytorch.callbacks.EarlyStopping
-        kwargs:
-            patience: 5
-            verbose: True
-            min_delta: 0.05
-            monitor: 'val_loss'
-
-    checkpoint_callback:
-        object: lightning.pytorch.callbacks.ModelCheckpoint
-        kwargs:
-            save_top_k: 2
-            monitor: 'val_loss'
-
-    device_stats_monitor_callback: True
-
-    print_table_metrics_callback: True
-
     slack_callback: True
 
+    print_table_metrics_callback: True
+    
+    # early_stopping_callback:
+    #     object: lightning.pytorch.callbacks.EarlyStopping
+    #     kwargs:
+    #         patience: 5
+    #         verbose: True
+    #         min_delta: 0.005
+    #         monitor: 'val_loss'
+
+    # checkpoint_callback:
+    #     object: lightning.pytorch.callbacks.ModelCheckpoint
+    #     kwargs:
+    #         save_top_k: 2
+    #         monitor: 'val_loss'
 
 
 loggers:
@@ -55,9 +59,9 @@ loggers:
         object: lightning.pytorch.loggers.WandbLogger
         kwargs:
             project: 'wandb-sentiment-analysis'
-            offline: False
+            offline: True ###
 
-    csv_logger: 
+    csv_logger:
         object: lightning.pytorch.loggers.CSVLogger
         kwargs: 
             save_dir: 'logs'

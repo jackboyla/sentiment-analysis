@@ -4,6 +4,11 @@ datafiles:
     dataset_encoding: 'ISO-8859-1'
 
 data_processing:
+    tokenizer:
+        object: transformers.CanineTokenizer.from_pretrained
+        kwargs: 
+            pretrained_model_name_or_path: 'google/canine-c'
+            return_tensors: 'pt'
     train_size: 0.6
     val_size: 0.2
     test_size: 0.2
@@ -21,10 +26,11 @@ hyperparameters:
 
     trainer:
         accelerator: 'gpu'
-        enable_progress_bar: True
+        enable_progress_bar: False
+        precision: '16-mixed'
         max_epochs: 250
-        # profiler: 'simple'
-        log_every_n_steps: 300
+        profiler: 'simple'
+        log_every_n_steps: 500
 
 
 callbacks:
@@ -53,7 +59,6 @@ loggers:
         kwargs:
             project: 'wandb-sentiment-analysis'
             offline: False
-            log_model: True
 
     # csv_logger: 
     #     object: lightning.pytorch.loggers.CSVLogger
