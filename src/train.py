@@ -57,7 +57,7 @@ def main():
             '''
             if device_props.major >= 7 and device_props.minor >= 0:
                 float32_matmul_precision = 'medium'
-                logger.info(f"This device has Tensor Cores!\n Setting precision to {float32_matmul_precision}...")
+                logger.info(f"This device has Tensor Cores! Setting precision to {float32_matmul_precision}...")
                 torch.set_float32_matmul_precision('medium')
             else:
                 logger.info("This device does not have Tensor Cores :(")
