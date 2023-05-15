@@ -20,7 +20,7 @@ class SentimentClassifier(pl.LightningModule):
             self.hidden_size = self.encoder.config.hidden_size
         else:
             self.encoder = utils.load_obj(self.cfg.backbone.object)
-            self.encoder = self.encoder(input_size=self.tokenizer.vocab_size, **self.cfg.backbone.kwargs)
+            self.encoder = self.encoder(input_size=self.tokenizer.vocab_size, **self.cfg.backbone.get('kwargs', {}))
             self.hidden_size = self.encoder.hidden_size
 
         # Freeze encoder if sepcified
@@ -105,5 +105,26 @@ class SentimentClassifier(pl.LightningModule):
         self.log('test_F1', self.test_f1)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        return optimizer
+        # https://github.com/Lightning-AI/lightning/issues/2005
+        grouped_parameters = [
+            {"params": [p for p in self.encoder.parameters() if p.requires_grad], 
+             'lr': self.lr,
+             'name': 'backbone_LR'
+             },
+
+            {"params": [p for p in self.classifier_head.parameters()], 
+             'lr': self.lr * 100,
+             'name': 'head_LR'
+             },
+        ]
+
+        optimizer = utils.load_obj(self.cfg.optimizer.object)
+        optimizer = optimizer(grouped_parameters, **self.cfg.optimizer.get('kwargs', {}))
+
+        scheduler = transformers.get_linear_schedule_with_warmup(
+            optimizer,
+            num_warmup_steps=0,
+            num_training_steps=self.trainer.estimated_stepping_batches,
+        )
+        scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
+        return [optimizer], [scheduler]
