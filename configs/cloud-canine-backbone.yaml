@@ -16,7 +16,8 @@ data_processing:
 hyperparameters:
     backbone: 
         object: transformers.models.canine.modeling_canine.CanineModel
-        name: 'google/canine-c'
+        kwargs: 
+            pretrained_model_name_or_path: 'google/canine-c'
     batch_size: 64
     pin_memory: True
     lr: 1e-5
