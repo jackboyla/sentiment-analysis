@@ -10,6 +10,23 @@ import requests
 import datetime
 import os
 
+import sys
+import logging
+
+
+def create_logger(name):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        '%(asctime)s %(name)s %(levelname)s: %(message)s'
+    )
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.propagate = False
+    return logger
+
 # https://github.com/quantumblacklabs/kedro/blob/9809bd7ca0556531fa4a2fc02d5b2dc26cf8fa97/kedro/utils.py
 def load_obj(obj_path: str, default_obj_path: str = "", name: str = None) -> typing.Any:
     
