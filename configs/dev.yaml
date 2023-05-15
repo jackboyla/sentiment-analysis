@@ -25,6 +25,9 @@ hyperparameters:
     num_classes: 2
     num_workers: 0
 
+    optimizer:
+        object: torch.optim.Adam
+
     trainer:
         accelerator: 'auto'
         enable_progress_bar: False ###
@@ -38,6 +41,11 @@ callbacks:
     slack_callback: True
 
     print_table_metrics_callback: True
+
+    learning_rate_monitor: 
+        object: lightning.pytorch.callbacks.LearningRateMonitor
+        kwargs:
+            logging_interval: 'step'
     
     # early_stopping_callback:
     #     object: lightning.pytorch.callbacks.EarlyStopping
@@ -59,7 +67,7 @@ loggers:
         object: lightning.pytorch.loggers.WandbLogger
         kwargs:
             project: 'wandb-sentiment-analysis'
-            offline: True ###
+            offline: False ###
 
     csv_logger:
         object: lightning.pytorch.loggers.CSVLogger

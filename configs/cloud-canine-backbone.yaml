@@ -20,12 +20,15 @@ hyperparameters:
     batch_size: 64
     pin_memory: True
     lr: 1e-5
-    freeze_encoder: 0.5
+    freeze_encoder: 1
     num_classes: 2
     num_workers: 0
 
+    optimizer:
+        object: torch.optim.Adam
+
     trainer:
-        accelerator: 'gpu'
+        accelerator: 'auto'
         enable_progress_bar: False
         precision: '16-mixed'
         max_epochs: 250
@@ -34,9 +37,15 @@ hyperparameters:
 
 
 callbacks:
+
     slack_callback: True
 
     print_table_metrics_callback: True
+
+    learning_rate_monitor: 
+        object: lightning.pytorch.callbacks.LearningRateMonitor
+        kwargs:
+            logging_interval: 'step'
     
     early_stopping_callback:
         object: lightning.pytorch.callbacks.EarlyStopping
@@ -58,10 +67,4 @@ loggers:
         object: lightning.pytorch.loggers.WandbLogger
         kwargs:
             project: 'wandb-sentiment-analysis'
-            offline: False
-
-    # csv_logger: 
-    #     object: lightning.pytorch.loggers.CSVLogger
-    #     kwargs: 
-    #         save_dir: 'logs'
-    #         name: 'lightning_logs'
+            offline: True
