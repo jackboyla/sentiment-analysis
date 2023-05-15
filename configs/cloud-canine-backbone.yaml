@@ -20,7 +20,7 @@ hyperparameters:
             pretrained_model_name_or_path: 'google/canine-c'
     batch_size: 64
     pin_memory: True
-    freeze_encoder: 1
+    freeze_encoder: 0.5
     num_classes: 2
     num_workers: 0
 

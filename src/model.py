@@ -12,7 +12,8 @@ class SentimentClassifier(pl.LightningModule):
         self.cfg = hyperparams
         self.tokenizer = tokenizer
 
-        self.lr = self.cfg.lr
+        self.backbone_lr = self.cfg.optimizer.lr.backbone
+        self.head_lr = self.cfg.optimizer.lr.head
 
         # Load Backbone
         if 'transformers' in self.cfg.backbone.object:
@@ -108,12 +109,12 @@ class SentimentClassifier(pl.LightningModule):
         # https://github.com/Lightning-AI/lightning/issues/2005
         grouped_parameters = [
             {"params": [p for p in self.encoder.parameters() if p.requires_grad], 
-             'lr': self.lr,
+             'lr': self.backbone_lr,
              'name': 'backbone_LR'
              },
 
             {"params": [p for p in self.classifier_head.parameters()], 
-             'lr': self.lr * 100,
+             'lr': self.head,
              'name': 'head_LR'
              },
         ]
