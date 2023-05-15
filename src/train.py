@@ -9,13 +9,13 @@ def main():
 
     import lightning as L
     from omegaconf import OmegaConf
-    from lightning.pytorch.callbacks import DeviceStatsMonitor
     import time
     import wandb
     import argparse
 
     import multiprocessing
     import psutil
+    import logging
 
 
     parser = argparse.ArgumentParser()
@@ -23,12 +23,20 @@ def main():
     parser.add_argument("--server_log_file", type=str, help="Log file for instance output")
     args = parser.parse_args()
 
+    logger = utils.create_logger(__name__)
+
 
     cfg_path = args.cfg_path  # 'configs/local-canine-backbone.yaml'
     cfg = OmegaConf.load(cfg_path)
 
     server_log_file = args.server_log_file
     cfg.datafiles.server_log_file = server_log_file
+
+    # logging.basicConfig(filename=cfg.datafiles.server_log_file, level=logging.INFO)
+
+
+    # -----------------------------------------------
+    # MACHINE PRECISION
 
     def set_torch_precision():
         '''
@@ -48,13 +56,26 @@ def main():
                 so we check if the device's major version is 7 or greater and the minor version is 0 or greater.
             '''
             if device_props.major >= 7 and device_props.minor >= 0:
-                print("This device has Tensor Cores!\n Setting precision to medium...")
+                float32_matmul_precision = 'medium'
+                logger.info(f"This device has Tensor Cores!\n Setting precision to {float32_matmul_precision}...")
                 torch.set_float32_matmul_precision('medium')
             else:
-                print("This device does not have Tensor Cores :(")
+                logger.info("This device does not have Tensor Cores :(")
 
-    # set_torch_precision()
+    set_torch_precision()
 
+    def set_trainer_precision():
+
+        if torch.cuda.is_available() == False and str(cfg.hyperparameters.trainer.precision) != '32':
+            logger.warning("CUDA not available, Lightning Trainer precision being set to standard 32-bit...")
+            cfg.hyperparameters.trainer.precision = '32'
+        else:
+            logger.info(f"Lightning Trainer Precision being set to {cfg.hyperparameters.trainer.precision}")
+
+    set_trainer_precision()
+
+    # -----------------------------------------------------------------------
+    # DATA
 
     def set_num_workers():
         # Get the number of CPU cores
@@ -83,11 +104,9 @@ def main():
     if 'num_workers' not in cfg.hyperparameters:
         num_workers = set_num_workers()
         cfg.hyperparameters.num_workers = num_workers
-    print(f"num_workers assigned for DataLoader: {cfg.hyperparameters.num_workers}")
+        
+    logger.info(f"num_workers assigned for DataLoader: {cfg.hyperparameters.num_workers}")
 
-
-    # -----------------------------------------------------------------------
-    # DATA
 
     dm = dataflow.TweetDataModule(cfg)
 
@@ -107,10 +126,11 @@ def main():
 
         for logger, values in cfg.loggers.items():
             if logger not in loggers:
-                loggers[logger] = (utils.load_obj(values.object)(**values.kwargs))
+                loggers[logger] = (utils.load_obj(values.object)(**values.get('kwargs', {})))
 
         if wandb_logging:
             loggers['wandb_logger'].experiment.config.update(cfg)
+
 
     # ---------------------------------------------------------------------
     # CALLBACKS
@@ -128,16 +148,17 @@ def main():
 
         for callback, values in cfg.callbacks.items():
             if callback not in callbacks:
-                callbacks[callback] = (utils.load_obj(values.object)(**values.kwargs))
+                callbacks[callback] = (utils.load_obj(values.object)(**values.get('kwargs', {})))
 
 
     # -----------------------------------------------------------------------
-    # PROFILER
-    from lightning.pytorch.profilers import PyTorchProfiler
+    # # PROFILER
+    # from lightning.pytorch.profilers import PyTorchProfiler
 
-    pytorch_profiler = PyTorchProfiler(profile_memory = True, 
-                                       sort_by_key='cuda_memory_usage',
-                                       )
+    # pytorch_profiler = PyTorchProfiler(profile_memory = True, 
+    #                                    sort_by_key='cuda_memory_usage',
+    #                                    )
+    # cfg.hyperparameters.trainer.profiler = pytorch_profiler
 
 
     # -----------------------------------------------------
@@ -145,8 +166,7 @@ def main():
 
     trainer = L.Trainer(logger=list(loggers.values()),
                         callbacks=list(callbacks.values()),
-                        profiler=pytorch_profiler,
-                        **cfg.hyperparameters.trainer
+                        **cfg.hyperparameters.get('trainer', {}),
                         )
 
     classifier = models.SentimentClassifier(tokenizer=dm.tokenizer, 
@@ -162,11 +182,12 @@ def main():
         loggers['wandb_logger'].experiment.unwatch(classifier)
 
     # # Save config file to CSV log directory
-    # with open(os.path.join(*[cfg.loggers.csv_logger.kwargs.save_dir, 
-    #                         cfg.loggers.csv_logger.kwargs.name, 
-    #                         cfg.loggers.csv_logger.kwargs.version, 
+    # with open(os.path.join(*[trainer.log_dir, 
     #                         'config.yaml']), 'w') as f:
     #     OmegaConf.save(config=cfg, f=f)
+
+    # # ----------------------------------------------------
+    # # TEST
 
     trainer.test(classifier, datamodule=dm)
 
