@@ -114,7 +114,7 @@ class SentimentClassifier(pl.LightningModule):
              },
 
             {"params": [p for p in self.classifier_head.parameters()], 
-             'lr': self.head,
+             'lr': self.head_lr,
              'name': 'head_LR'
              },
         ]
@@ -122,10 +122,14 @@ class SentimentClassifier(pl.LightningModule):
         optimizer = utils.load_obj(self.cfg.optimizer.object)
         optimizer = optimizer(grouped_parameters, **self.cfg.optimizer.get('kwargs', {}))
 
-        scheduler = transformers.get_linear_schedule_with_warmup(
-            optimizer,
-            num_warmup_steps=0,
-            num_training_steps=self.trainer.estimated_stepping_batches,
-        )
+        scheduler = utils.load_obj(self.cfg.scheduler.object)
+        scheduler = scheduler(optimizer,
+                              num_training_steps=self.trainer.estimated_stepping_batches, 
+                              **self.cfg.scheduler.get('kwargs', {}))
+        # scheduler = transformers.get_linear_schedule_with_warmup(
+        #     optimizer,
+        #     num_warmup_steps=0,
+        #     num_training_steps=self.trainer.estimated_stepping_batches,
+        # )
         scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
         return [optimizer], [scheduler]

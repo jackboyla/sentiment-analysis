@@ -30,6 +30,11 @@ hyperparameters:
           backbone: 1e-5
           head: 1e-3
 
+    scheduler:
+        object: transformers.get_linear_schedule_with_warmup
+        kwargs:
+            num_warmup_steps: 0
+
     trainer:
         accelerator: 'auto'
         enable_progress_bar: False

@@ -20,13 +20,20 @@ hyperparameters:
             pretrained_model_name_or_path: 'google/canine-c'
     batch_size: 16 #####
     pin_memory: True
-    lr: 1e-5
     freeze_encoder: 1 ###
     num_classes: 2
     num_workers: 0
 
     optimizer:
         object: torch.optim.Adam
+        lr:
+          backbone: 1e-5
+          head: 1e-3
+
+    scheduler:
+        object: transformers.get_linear_schedule_with_warmup
+        kwargs:
+            num_warmup_steps: 0
 
     trainer:
         accelerator: 'auto'
@@ -38,6 +45,7 @@ hyperparameters:
 
 
 callbacks:
+
     slack_callback: True
 
     print_table_metrics_callback: True
