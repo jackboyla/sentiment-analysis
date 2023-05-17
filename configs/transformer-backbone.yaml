@@ -1,7 +1,12 @@
 seed: 42
 datafiles:
-    data_dir: 'data/training.1600000.processed.noemoticon.csv'
-    dataset_encoding: 'ISO-8859-1'
+    data_dirs: {
+        'data/science-challenge-master-data/negative': 'negative',
+        'data/science-challenge-master-data/positive': 'positive',
+        'data/science-challenge-master-data/neutral': 'neutral'
+        }
+    kwargs: 
+        names: ['text']
 
 data_processing:
     tokenizer:
@@ -23,9 +28,19 @@ hyperparameters:
             dropout: 0.1
     batch_size: 64
     pin_memory: True
-    lr: 1e-4
     freeze_encoder: 0
-    num_classes: 2
+    num_classes: 3
+
+    optimizer:
+        object: torch.optim.Adam
+        lr:
+          backbone: 1e-5
+          head: 1e-3
+
+    scheduler:
+        object: transformers.get_linear_schedule_with_warmup
+        kwargs:
+            num_warmup_steps: 0
 
     trainer:
         accelerator: 'auto'
@@ -35,6 +50,12 @@ hyperparameters:
         profiler: 'simple'
         log_every_n_steps: 500
 
+loggers:
+    wandb_logger:
+        object: lightning.pytorch.loggers.WandbLogger
+        kwargs:
+            project: 'wandb-sentiment-analysis'
+            offline: False
 
 callbacks:
     early_stopping_callback:
@@ -45,6 +66,11 @@ callbacks:
             min_delta: 0.05
             monitor: 'val_loss'
 
+    learning_rate_monitor: 
+        object: lightning.pytorch.callbacks.LearningRateMonitor
+        kwargs:
+            logging_interval: 'step'
+
     checkpoint_callback:
         object: lightning.pytorch.callbacks.ModelCheckpoint
         kwargs:
@@ -54,18 +80,3 @@ callbacks:
     slack_callback: True
 
     print_table_metrics_callback: True
-
-
-
-loggers:
-    wandb_logger:
-        object: lightning.pytorch.loggers.WandbLogger
-        kwargs:
-            project: 'wandb-sentiment-analysis'
-            offline: False
-
-    # csv_logger: 
-    #     object: lightning.pytorch.loggers.CSVLogger
-    #     kwargs: 
-    #         save_dir: 'logs'
-    #         name: 'lightning_logs'

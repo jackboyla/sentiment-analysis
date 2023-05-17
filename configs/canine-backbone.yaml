@@ -1,7 +1,13 @@
 seed: 42
 datafiles:
-    data_dir: 'data/training.1600000.processed.noemoticon.csv'
-    dataset_encoding: 'ISO-8859-1'
+    data_dirs: {
+        'data/science-challenge-master-data/negative': 'negative',
+        'data/science-challenge-master-data/positive': 'positive',
+        'data/science-challenge-master-data/neutral': 'neutral'
+        }
+    kwargs: 
+        names: ['text']
+        # encoding: 'ISO-8859-1'
 
 data_processing:
     tokenizer:
@@ -20,9 +26,8 @@ hyperparameters:
             pretrained_model_name_or_path: 'google/canine-c'
     batch_size: 64
     pin_memory: True
-    freeze_encoder: 1
-    num_classes: 2
-    num_workers: 0
+    freeze_encoder: 0.5
+    num_classes: 3
 
     optimizer:
         object: torch.optim.Adam
@@ -38,11 +43,17 @@ hyperparameters:
     trainer:
         accelerator: 'auto'
         enable_progress_bar: False
-        precision: '32'
+        precision: '16-mixed'
         max_epochs: 250
         profiler: 'simple'
         log_every_n_steps: 500
 
+loggers:
+    wandb_logger:
+        object: lightning.pytorch.loggers.WandbLogger
+        kwargs:
+            project: 'wandb-sentiment-analysis'
+            offline: True
 
 callbacks:
 
@@ -68,11 +79,3 @@ callbacks:
         kwargs:
             save_top_k: 2
             monitor: 'val_loss'
-
-
-loggers:
-    wandb_logger:
-        object: lightning.pytorch.loggers.WandbLogger
-        kwargs:
-            project: 'wandb-sentiment-analysis'
-            offline: True
