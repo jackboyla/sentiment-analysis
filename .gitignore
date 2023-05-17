@@ -5,6 +5,9 @@ logs/*
 *.wandb
 wandb-sentiment-analysis
 
+.DS_Store
+*.swp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
