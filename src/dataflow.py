@@ -11,7 +11,10 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 from transformers import AutoTokenizer
 from functools import partial
+import html
 
+def convert_html_entities(text):
+    return html.unescape(text)
 
 def remove_urls(text):
     url_pattern = re.compile(r'https?://\S+|www\.\S+')
@@ -26,9 +29,10 @@ def remove_mentions_hashtags(text):
 
 class TweetDataset(Dataset):
     def __init__(self, tweets, labels, tokenizer):
-        tweets = tweets.apply(remove_urls)
-        self.tweets = tweets.apply(remove_mentions_hashtags)
-        self.tweets = self.tweets
+        self.tweets = tweets
+        self.tweets = self.tweets.apply(convert_html_entities)
+        self.tweets = self.tweets.apply(remove_urls)
+        self.tweets = self.tweets.apply(remove_mentions_hashtags)
         self.labels = labels
         self.tokenizer = tokenizer
 
@@ -39,11 +43,29 @@ class TweetDataset(Dataset):
         tweets = self.tweets[idx]
         labels = self.labels[idx]
 
-        # encoded_input_ids, attention_masks = self.tokenizer.encode(tweets)
         encoded_input = self.tokenizer(tweets)
         encoded_input.update({'tweet': tweets, 'labels': labels})
         return encoded_input
     
+def embed_bag_collate_fn(batch, input_pad_token_id=0):
+    '''
+    Colatte fn for prepping batch before EmbeddingBag Layer
+    '''
+
+    attention_masks = [torch.tensor(sample['attention_mask']) for sample in batch]
+    attention_masks = torch.cat(attention_masks, dim=0)
+    input_ids = [torch.tensor(sample['input_ids']) for sample in batch]
+    offsets = torch.tensor([0] + [len(ids) for ids in input_ids[:-1]])
+    offsets = torch.cumsum(offsets, dim=0)
+    input_ids = torch.cat(input_ids, dim=0)
+    labels = [sample['labels'] for sample in batch]
+
+
+    return {'input_ids': input_ids, 'offsets': offsets, 'attention_mask': attention_masks}, torch.tensor(labels)
+
+def partial_embed_bag_collate_fn(b, input_pad_token_id):
+    return embed_bag_collate_fn(b, input_pad_token_id=input_pad_token_id)
+
 
 def collate_fn(batch, input_pad_token_id=0):
     '''
@@ -65,6 +87,7 @@ def partial_collate_fn(b, input_pad_token_id):
     return collate_fn(b, input_pad_token_id=input_pad_token_id)
 
 
+
 class TweetDataModule(L.pytorch.LightningDataModule):
     def __init__(self, cfg):
         super().__init__()
@@ -72,9 +95,13 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         self.num_workers = self.cfg.hyperparameters.num_workers
         self.pin_memory = self.cfg.hyperparameters.pin_memory
 
+        self.label_decode_map = {'negative': 0, 
+                                 'neutral': 1,
+                                 'positive': 2}
+
 
         if 'transformers' in cfg.data_processing.tokenizer.object:
-            # single sequence: [CLS] X [SEP]
+            # single sequence: [CLS] sequence_ids [SEP]
             self.tokenizer = AutoTokenizer.from_pretrained(**self.cfg.data_processing.tokenizer.kwargs)
         else:
             self.tokenizer = utils.load_obj(self.cfg.data_processing.tokenizer.object)
@@ -86,17 +113,21 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         https://pytorch-lightning.readthedocs.io/en/latest/data/datamodule.html#prepare-data
         """
 
-        DATASET_COLUMNS = ["target", "ids", "date", "flag", "user", "text"]
-        df = pd.read_csv(
-            self.cfg.datafiles.data_dir,
-            encoding=self.cfg.datafiles.dataset_encoding,
-            names=DATASET_COLUMNS
-            )
-        decode_map = {0: 0, 4: 1}
-        def binarize_sentiment(label):
-            return decode_map[int(label)]
+        df = pd.DataFrame()
 
-        df['target'] = df.target.apply(lambda x: binarize_sentiment(x))
+        for file, label in self.cfg.datafiles.data_dirs.items():
+            temp_df = pd.read_csv(file, sep='\t', **self.cfg.datafiles.get('kwargs', {})
+                                )
+            if label in ['positive', 'neutral', 'negative']:
+                temp_df['label'] = label
+            df = pd.concat([df, temp_df])
+
+        df.reset_index(inplace=True, drop=True)
+
+        def encode_sentiment(label):
+            return self.label_decode_map[label]
+
+        df['target'] = df['label'].apply(lambda x: encode_sentiment(x))
 
         train_size = int(self.cfg.data_processing.train_size if self.cfg.data_processing.train_size > 1.0 else self.cfg.data_processing.train_size*len(df))
         val_size = int(self.cfg.data_processing.val_size if self.cfg.data_processing.val_size > 1.0 else self.cfg.data_processing.val_size*len(df))
