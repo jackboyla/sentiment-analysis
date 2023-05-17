@@ -3,7 +3,7 @@
 def main():
     import os
     import torch
-    import dataflow as dataflow
+    import dataflow
     import model as models
     import utils
 
@@ -23,7 +23,7 @@ def main():
     parser.add_argument("--server_log_file", type=str, help="Log file for instance output")
     args = parser.parse_args()
 
-    logger = utils.create_logger(__name__)
+    run_logger = utils.create_logger(__name__)
 
 
     cfg_path = args.cfg_path  # 'configs/local-canine-backbone.yaml'
@@ -57,20 +57,20 @@ def main():
             '''
             if device_props.major >= 7 and device_props.minor >= 0:
                 float32_matmul_precision = 'medium'
-                logger.info(f"This device has Tensor Cores! Setting precision to {float32_matmul_precision}...")
+                run_logger.info(f"This device has Tensor Cores! Setting precision to {float32_matmul_precision}...")
                 torch.set_float32_matmul_precision('medium')
             else:
-                logger.info("This device does not have Tensor Cores :(")
+                run_logger.info("This device does not have Tensor Cores :(")
 
     set_torch_precision()
 
     def set_trainer_precision():
 
         if torch.cuda.is_available() == False and str(cfg.hyperparameters.trainer.precision) != '32':
-            logger.warning("CUDA not available, Lightning Trainer precision being set to standard 32-bit...")
+            run_logger.warning("CUDA not available, Lightning Trainer precision being set to standard 32-bit...")
             cfg.hyperparameters.trainer.precision = '32'
         else:
-            logger.info(f"Lightning Trainer Precision being set to {cfg.hyperparameters.trainer.precision}")
+            run_logger.info(f"Lightning Trainer Precision being set to {cfg.hyperparameters.trainer.precision}")
 
     set_trainer_precision()
 
@@ -105,10 +105,12 @@ def main():
         num_workers = set_num_workers()
         cfg.hyperparameters.num_workers = num_workers
         
-    logger.info(f"num_workers assigned for DataLoader: {cfg.hyperparameters.num_workers}")
+    run_logger.info(f"num_workers assigned for DataLoader: {cfg.hyperparameters.num_workers}")
 
 
     dm = dataflow.TweetDataModule(cfg)
+
+    cfg.data_processing.label_decode_map = dm.label_decode_map
 
     # ---------------------------------------------------------------------
     # LOGGERS
@@ -168,6 +170,12 @@ def main():
                         callbacks=list(callbacks.values()),
                         **cfg.hyperparameters.get('trainer', {}),
                         )
+    
+    # Save config file to CSV log directory
+    with open(os.path.join(trainer.log_dir, 
+                            'config.yaml'), 'w') as f:
+        OmegaConf.save(config=cfg, f=f)
+    run_logger.info(f"Config saved to {trainer.log_dir}")
 
     classifier = models.SentimentClassifier(tokenizer=dm.tokenizer, 
                                             hyperparams=cfg.hyperparameters)
@@ -180,11 +188,6 @@ def main():
 
     if wandb_logging:
         loggers['wandb_logger'].experiment.unwatch(classifier)
-
-    # # Save config file to CSV log directory
-    # with open(os.path.join(*[trainer.log_dir, 
-    #                         'config.yaml']), 'w') as f:
-    #     OmegaConf.save(config=cfg, f=f)
 
     # # ----------------------------------------------------
     # # TEST

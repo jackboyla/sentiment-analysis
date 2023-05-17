@@ -37,7 +37,7 @@ class SentimentClassifier(pl.LightningModule):
             print(f"Frozen the first {total_frozen_params} out of {total_params} encoder weights")
 
         # Dropout
-        self.dropout = nn.Dropout(0.1) # 0.1 for canine-c
+        self.dropout = nn.Dropout(0.1)
 
         # Define Classifier Head
         self.num_classes = self.cfg.num_classes
@@ -49,17 +49,18 @@ class SentimentClassifier(pl.LightningModule):
 
         # Loss + Metrics
         self.criterion = torch.nn.CrossEntropyLoss()
-        self.train_acc = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes)
-        self.val_acc = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes)
+
+        self.train_acc = torchmetrics.classification.MulticlassAccuracy(num_classes=self.num_classes, average='micro')
+        self.val_acc = torchmetrics.classification.MulticlassAccuracy(num_classes=self.num_classes, average='micro')
   
-        self.train_f1 = torchmetrics.F1Score(task="multiclass", num_classes=self.num_classes)
-        self.val_f1 = torchmetrics.F1Score(task="multiclass", num_classes=self.num_classes)
-        self.test_f1 = torchmetrics.F1Score(task="multiclass", num_classes=self.num_classes)
+        self.train_f1 = torchmetrics.classification.MulticlassF1Score(num_classes=self.num_classes, average='macro')
+        self.val_f1 = torchmetrics.classification.MulticlassF1Score(num_classes=self.num_classes, average='macro')
+        self.test_f1 = torchmetrics.classification.MulticlassF1Score(num_classes=self.num_classes, average='macro')
 
 
     def get_logits(self, inputs):
         encoder_output = self.encoder(**inputs, output_hidden_states=True) 
-        pooled_output = encoder_output['pooler_output']
+        pooled_output = encoder_output['pooler_output']  # [B, hidden_size]
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier_head(pooled_output)
         return logits
@@ -102,7 +103,7 @@ class SentimentClassifier(pl.LightningModule):
         logits = self.get_logits(inputs)
         test_loss = self.criterion(logits, labels)
         self.test_f1(logits, labels)
-        self.log("test_loss", test_loss)
+        self.log("test_loss", test_loss, on_step=True)
         self.log('test_F1', self.test_f1)
 
     def configure_optimizers(self):

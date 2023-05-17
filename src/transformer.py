@@ -41,7 +41,6 @@ class TransformerEncoder(nn.Module):
         self.pos_encoder = PositionalEncoding(hidden_size)
         encoder_layer = nn.TransformerEncoderLayer(hidden_size, num_heads, hidden_size, dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers)
-        self.fc = nn.Linear(hidden_size, 2)
         self.dropout = nn.Dropout(dropout)
         self.hidden_size = hidden_size
         
@@ -53,7 +52,6 @@ class TransformerEncoder(nn.Module):
         x = x.permute(1, 0, 2) # switch back
         x = x.mean(dim=1)
         x = self.dropout(x)
-        # x = self.fc(x)
         return {'pooler_output': x}
 
 
