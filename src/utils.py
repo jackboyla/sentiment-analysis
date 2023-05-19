@@ -127,10 +127,10 @@ class SlackCallback(L.pytorch.callbacks.Callback):
             metrics_dict = copy.copy(trainer.callback_metrics)
             self.message_dict['train_loss'] = metrics_dict['train_loss']
             self.message_dict['train_F1'] = metrics_dict['train_F1']
-            self.message_dict['train_acc'] = metrics_dict['train_acc']
+            # self.message_dict['train_acc'] = metrics_dict['train_acc']
             self.message_dict['val_loss'] = metrics_dict['val_loss']
             self.message_dict['val_F1'] = metrics_dict['val_F1']
-            self.message_dict['val_acc'] = metrics_dict['val_acc']
+            # self.message_dict['val_acc'] = metrics_dict['val_acc']
 
             payload = self.format_message_dict(trainer.current_epoch)
 
