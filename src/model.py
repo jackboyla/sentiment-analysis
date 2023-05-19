@@ -21,7 +21,7 @@ class SentimentClassifier(pl.LightningModule):
             self.hidden_size = self.encoder.config.hidden_size
         else:
             self.encoder = utils.load_obj(self.cfg.backbone.object)
-            self.encoder = self.encoder(input_size=self.tokenizer.vocab_size, **self.cfg.backbone.get('kwargs', {}))
+            self.encoder = self.encoder(self.cfg.backbone.get('kwargs', {}))
             self.hidden_size = self.encoder.hidden_size
 
         # Freeze encoder if sepcified
@@ -44,8 +44,9 @@ class SentimentClassifier(pl.LightningModule):
         self.classifier_head = nn.Sequential(
             nn.Linear(self.hidden_size, self.hidden_size),
             nn.ReLU(),
-            nn.Linear(self.hidden_size, self.num_classes)
-        )
+            nn.Linear(self.hidden_size, self.num_classes),
+            nn.Softmax(dim=1)
+            )
 
         # Loss + Metrics
         self.criterion = torch.nn.CrossEntropyLoss()
