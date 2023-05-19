@@ -100,14 +100,6 @@ class TweetDataModule(L.pytorch.LightningDataModule):
                                  'positive': 2}
 
 
-        if 'transformers' in cfg.data_processing.tokenizer.object:
-            # single sequence: [CLS] sequence_ids [SEP]
-            self.tokenizer = AutoTokenizer.from_pretrained(**self.cfg.data_processing.tokenizer.kwargs)
-        else:
-            self.tokenizer = utils.load_obj(self.cfg.data_processing.tokenizer.object)
-        
-
-
     def prepare_data(self):
         """
         https://pytorch-lightning.readthedocs.io/en/latest/data/datamodule.html#prepare-data
@@ -140,6 +132,21 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         self.train_df.reset_index(inplace=True, drop=True)
         self.val_df.reset_index(inplace=True, drop=True)
         self.test_df.reset_index(inplace=True, drop=True)
+
+        self.tokenizer = self.get_tokenizer()
+
+
+    def get_tokenizer(self):
+        if 'transformers' in self.cfg.data_processing.tokenizer.object:
+                    tokenizer = AutoTokenizer.from_pretrained(**self.cfg.data_processing.tokenizer.kwargs)
+        else:
+            tokenizer = utils.load_obj(self.cfg.data_processing.tokenizer.object)
+            
+            tokenizer = tokenizer(
+                train_sequences=self.train_df['text'].values,
+                **self.cfg.data_processing.tokenizer.get('kwargs', {})
+                )
+        return tokenizer
 
 
     def setup(self, stage: str):
