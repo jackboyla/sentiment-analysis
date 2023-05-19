@@ -1,28 +1,35 @@
 seed: 42
 datafiles:
-    data_dir: 'data/training.1600000.processed.noemoticon.csv'
-    dataset_encoding: 'ISO-8859-1'
+    data_dirs: {
+        'data/science-challenge-master-data/negative': 'negative',
+        'data/science-challenge-master-data/positive': 'positive',
+        'data/science-challenge-master-data/neutral': 'neutral'
+        }
+    kwargs: 
+        names: ['text']
 
-data_processing: ###
+data_processing:
     tokenizer:
         object: transformers.CanineTokenizer.from_pretrained
         kwargs: 
             pretrained_model_name_or_path: 'google/canine-c'
             return_tensors: 'pt'
-    train_size: 1000
-    val_size: 200
+    train_size: 0.6
+    val_size: 0.2
     test_size: 0.2
 
 hyperparameters:
-    backbone: 
-        object: transformers.models.canine.modeling_canine.CanineModel
+    backbone:
+        object: lstm.SentimentLSTM
         kwargs: 
-            pretrained_model_name_or_path: 'google/canine-c'
-    batch_size: 16 #####
+            embedding_dim: 32
+            hidden_size: 128
+            num_layers: 4
+            dropout: 0.1
+    batch_size: 64
     pin_memory: True
-    freeze_encoder: 1 ###
-    num_classes: 2
-    num_workers: 0
+    freeze_encoder: 0
+    num_classes: 3
 
     optimizer:
         object: torch.optim.Adam
@@ -37,12 +44,18 @@ hyperparameters:
 
     trainer:
         accelerator: 'auto'
-        enable_progress_bar: False ###
+        enable_progress_bar: True
         precision: '16-mixed'
         max_epochs: 250
         profiler: 'simple'
-        log_every_n_steps: 25 ####
+        log_every_n_steps: 500
 
+loggers:
+    wandb_logger:
+        object: lightning.pytorch.loggers.WandbLogger
+        kwargs:
+            project: 'wandb-sentiment-analysis'
+            offline: False
 
 callbacks:
 
@@ -55,30 +68,17 @@ callbacks:
         kwargs:
             logging_interval: 'step'
     
-    # early_stopping_callback:
-    #     object: lightning.pytorch.callbacks.EarlyStopping
-    #     kwargs:
-    #         patience: 5
-    #         verbose: True
-    #         min_delta: 0.005
-    #         monitor: 'val_loss'
-
-    # checkpoint_callback:
-    #     object: lightning.pytorch.callbacks.ModelCheckpoint
-    #     kwargs:
-    #         save_top_k: 2
-    #         monitor: 'val_loss'
-
-
-loggers:
-    wandb_logger:
-        object: lightning.pytorch.loggers.WandbLogger
+    early_stopping_callback:
+        object: lightning.pytorch.callbacks.EarlyStopping
         kwargs:
-            project: 'wandb-sentiment-analysis'
-            offline: False ###
+            patience: 5
+            verbose: True
+            min_delta: 0.005
+            monitor: 'val_loss'
 
-    csv_logger:
-        object: lightning.pytorch.loggers.CSVLogger
-        kwargs: 
-            save_dir: 'logs'
-            name: 'lightning_logs'
+    checkpoint_callback:
+        object: lightning.pytorch.callbacks.ModelCheckpoint
+        kwargs:
+            save_top_k: 2
+            monitor: 'val_loss'
+

@@ -28,6 +28,7 @@ hyperparameters:
     pin_memory: True
     freeze_encoder: 0.5
     num_classes: 3
+    num_workers: 0
 
     optimizer:
         object: torch.optim.Adam

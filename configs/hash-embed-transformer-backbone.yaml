@@ -10,24 +10,32 @@ datafiles:
 
 data_processing:
     tokenizer:
-        object: custom_tokenizers.CharTokenizer
+        object: transformers.CanineTokenizer.from_pretrained
         kwargs: 
-            vocab_size: 250
+            pretrained_model_name_or_path: 'google/canine-c'
             return_tensors: 'pt'
-
     train_size: 0.6
     val_size: 0.2
     test_size: 0.2
 
 hyperparameters:
-    backbone:
-        object: lstm.SentimentLSTM
+    backbone: 
+        object: transformer.TransformerEncoder
         kwargs: 
-            embedding_dim: 128
             hidden_size: 128
             num_layers: 2
+            num_heads: 2
             dropout: 0.1
             
+            embedding: 
+                object: transformers.models.canine.modeling_canine.CanineEmbeddings
+            num_hash_functions: 4
+            num_hash_buckets: 5000 # 16384
+            type_vocab_size: 16
+            layer_norm_eps: 1e-12
+            hidden_dropout_prob: 0.1
+            max_position_embeddings: 5000 # 16384
+
     classifier_head:
         num_layers: 1
     batch_size: 64
@@ -62,23 +70,18 @@ loggers:
             offline: False
 
 callbacks:
-
-    slack_callback: True
-
-    print_table_metrics_callback: True
-
-    learning_rate_monitor: 
-        object: lightning.pytorch.callbacks.LearningRateMonitor
-        kwargs:
-            logging_interval: 'step'
-    
     early_stopping_callback:
         object: lightning.pytorch.callbacks.EarlyStopping
         kwargs:
             patience: 5
             verbose: True
-            min_delta: 0.005
+            min_delta: 0.05
             monitor: 'val_loss'
+
+    learning_rate_monitor: 
+        object: lightning.pytorch.callbacks.LearningRateMonitor
+        kwargs:
+            logging_interval: 'step'
 
     checkpoint_callback:
         object: lightning.pytorch.callbacks.ModelCheckpoint
@@ -86,3 +89,6 @@ callbacks:
             save_top_k: 2
             monitor: 'val_loss'
 
+    slack_callback: True
+
+    print_table_metrics_callback: True
