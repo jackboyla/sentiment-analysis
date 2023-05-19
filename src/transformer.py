@@ -2,6 +2,9 @@
 import torch
 import torch.nn as nn
 import math
+import utils
+
+from transformers.models.canine.modeling_canine import CanineEmbeddings
 
 class PositionalEncoding(nn.Module):
     def __init__(self, embedding_dim, max_seq_len=5000):
@@ -35,21 +38,29 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_heads, dropout=0.1):
+    def __init__(self, cfg):
         super(TransformerEncoder, self).__init__()
-        self.embedding = nn.Embedding(input_size, hidden_size)
-        self.pos_encoder = PositionalEncoding(hidden_size)
-        encoder_layer = nn.TransformerEncoderLayer(hidden_size, num_heads, hidden_size, dropout)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers)
-        self.dropout = nn.Dropout(dropout)
-        self.hidden_size = hidden_size
+        self.cfg = cfg
+
+        if 'embedding' in cfg:
+            self.embedding = utils.load_obj(cfg.embedding.object)(cfg)
+        else:
+            self.embedding = nn.Embedding(cfg.input_size, cfg.embedding_dim)
+
+        self.pos_encoder = PositionalEncoding(cfg.hidden_size)
+        encoder_layer = nn.TransformerEncoderLayer(
+            cfg.hidden_size, cfg.num_heads, 
+            cfg.hidden_size, cfg.dropout, 
+            batch_first=True
+            )
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, cfg.num_layers)
+        self.dropout = nn.Dropout(cfg.dropout)
+        self.hidden_size = cfg.hidden_size
         
     def forward(self, input_ids, attention_mask, output_hidden_states=True):
-        x = self.embedding(input_ids)
-        x = self.pos_encoder(x)
-        x = x.permute(1, 0, 2) # switch batch_size and sequence_length dimensions
+        x = self.embedding(input_ids)  # [B, seq_len, hidden_dim]
+        # x = self.pos_encoder(x)
         x = self.transformer_encoder(x)
-        x = x.permute(1, 0, 2) # switch back
         x = x.mean(dim=1)
         x = self.dropout(x)
         return {'pooler_output': x}
