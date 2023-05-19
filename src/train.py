@@ -110,7 +110,11 @@ def main():
 
     dm = dataflow.TweetDataModule(cfg)
 
+    dm.prepare_data()
+
     cfg.data_processing.label_decode_map = dm.label_decode_map
+    cfg.data_processing.tokenizer.kwargs.vocab_size = dm.tokenizer.vocab_size
+    cfg.hyperparameters.backbone.kwargs.input_size = dm.tokenizer.vocab_size
 
     # ---------------------------------------------------------------------
     # LOGGERS
