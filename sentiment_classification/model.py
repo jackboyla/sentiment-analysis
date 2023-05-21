@@ -4,6 +4,7 @@ import lightning.pytorch as pl
 import utils
 import transformers
 
+run_logger = utils.create_logger(__name__)
 
 class SentimentClassifier(pl.LightningModule):
     def __init__(self, tokenizer, hyperparams):
@@ -17,7 +18,7 @@ class SentimentClassifier(pl.LightningModule):
 
         # Load Backbone
         if 'transformers' in self.cfg.backbone.object:
-            self.encoder = transformers.AutoModel.from_pretrained(**self.cfg.backbone.kwargs)
+            self.encoder = transformers.AutoModel.from_pretrained(self.cfg.backbone.kwargs.pretrained_model_name_or_path)
             self.hidden_size = self.encoder.config.hidden_size
         else:
             self.encoder = utils.load_obj(self.cfg.backbone.object)
@@ -34,7 +35,9 @@ class SentimentClassifier(pl.LightningModule):
                 if i < total_frozen_params:
                     param.requires_grad = False
                 i += 1
-            print(f"Frozen the first {total_frozen_params} out of {total_params} encoder weights")
+            run_logger.info(f"Frozen the first {total_frozen_params} out of {total_params} encoder weights")
+        else:
+            run_logger.info(f"No encoder weights frozen")
 
         # Dropout
         self.dropout = nn.Dropout(0.1)
@@ -42,10 +45,9 @@ class SentimentClassifier(pl.LightningModule):
         # Define Classifier Head
         self.num_classes = self.cfg.num_classes
         self.classifier_head = nn.Sequential(
-            nn.Linear(self.hidden_size, self.hidden_size),
-            nn.ReLU(),
+            # nn.Linear(self.hidden_size, self.hidden_size),
+            # nn.ReLU(),
             nn.Linear(self.hidden_size, self.num_classes),
-            nn.Softmax(dim=1)
             )
 
         # Loss + Metrics
@@ -108,7 +110,7 @@ class SentimentClassifier(pl.LightningModule):
         self.log('test_F1', self.test_f1)
 
     def configure_optimizers(self):
-        # https://github.com/Lightning-AI/lightning/issues/2005
+        # https://github.com/Lightning-AI/lightning/issues/2005#issuecomment-636218469
         grouped_parameters = [
             {"params": [p for p in self.encoder.parameters() if p.requires_grad], 
              'lr': self.backbone_lr,
@@ -120,18 +122,18 @@ class SentimentClassifier(pl.LightningModule):
              'name': 'head_LR'
              },
         ]
+        self.grouped_parameters = grouped_parameters
 
         optimizer = utils.load_obj(self.cfg.optimizer.object)
         optimizer = optimizer(grouped_parameters, **self.cfg.optimizer.get('kwargs', {}))
 
-        scheduler = utils.load_obj(self.cfg.scheduler.object)
-        scheduler = scheduler(optimizer,
-                              num_training_steps=self.trainer.estimated_stepping_batches, 
-                              **self.cfg.scheduler.get('kwargs', {}))
-        # scheduler = transformers.get_linear_schedule_with_warmup(
-        #     optimizer,
-        #     num_warmup_steps=0,
-        #     num_training_steps=self.trainer.estimated_stepping_batches,
-        # )
-        scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
-        return [optimizer], [scheduler]
+        if 'scheduler' in self.cfg.scheduler:
+            scheduler = utils.load_obj(self.cfg.scheduler.object)
+            scheduler = scheduler(optimizer,
+                                  num_training_steps=self.trainer.estimated_stepping_batches, 
+                                  **self.cfg.scheduler.get('kwargs', {}))
+
+            scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
+            return [optimizer], [scheduler]
+        return [optimizer]
+

@@ -6,14 +6,15 @@ def main():
     import dataflow
     import model as models
     import utils
+    import custom_callbacks
 
     import lightning as L
     from omegaconf import OmegaConf
     import time
     import wandb
+    import pickle
     import argparse
 
-    import multiprocessing
     import psutil
     import logging
 
@@ -32,7 +33,8 @@ def main():
     server_log_file = args.server_log_file
     cfg.datafiles.server_log_file = server_log_file
 
-    # logging.basicConfig(filename=cfg.datafiles.server_log_file, level=logging.INFO)
+    # Function for setting the seed
+    L.seed_everything(cfg.seed)
 
 
     # -----------------------------------------------
@@ -79,7 +81,7 @@ def main():
 
     def set_num_workers():
         # Get the number of CPU cores
-        num_cpus = multiprocessing.cpu_count()
+        num_cpus = os.cpu_count()
 
         # Check the available memory
         available_memory_gb = psutil.virtual_memory().available / 1024 / 1024 / 1024
@@ -102,7 +104,8 @@ def main():
         return num_workers
 
     if 'num_workers' not in cfg.hyperparameters:
-        num_workers = set_num_workers()
+        # num_workers = set_num_workers()
+        num_workers = 2
         cfg.hyperparameters.num_workers = num_workers
         
     run_logger.info(f"num_workers assigned for DataLoader: {cfg.hyperparameters.num_workers}")
@@ -115,6 +118,7 @@ def main():
     cfg.data_processing.label_decode_map = dm.label_decode_map
     cfg.data_processing.tokenizer.kwargs.vocab_size = dm.tokenizer.vocab_size
     cfg.hyperparameters.backbone.kwargs.input_size = dm.tokenizer.vocab_size
+
 
     # ---------------------------------------------------------------------
     # LOGGERS
@@ -145,16 +149,17 @@ def main():
         callbacks = {}
         if 'slack_callback' in cfg.callbacks:
             if cfg.callbacks.slack_callback:
-                callbacks['slack_callback'] = utils.SlackCallback(cfg=OmegaConf.to_yaml(cfg),
+                callbacks['slack_callback'] = custom_callbacks.SlackCallback(cfg=OmegaConf.to_yaml(cfg),
                                                                 server_log_file=server_log_file
                                                                 )
         if 'print_table_metrics_callback' in cfg.callbacks:
             if cfg.callbacks.print_table_metrics_callback:
-                callbacks['print_table_metrics_callback'] = utils.PrintTableMetricsCallback()
+                callbacks['print_table_metrics_callback'] = custom_callbacks.PrintTableMetricsCallback()
 
         for callback, values in cfg.callbacks.items():
             if callback not in callbacks:
                 callbacks[callback] = (utils.load_obj(values.object)(**values.get('kwargs', {})))
+
 
 
     # -----------------------------------------------------------------------
@@ -175,18 +180,33 @@ def main():
                         **cfg.hyperparameters.get('trainer', {}),
                         )
     
-    # Save config file to CSV log directory
-    with open(os.path.join(trainer.log_dir, 
-                            'config.yaml'), 'w') as f:
-        OmegaConf.save(config=cfg, f=f)
-    run_logger.info(f"Config saved to {trainer.log_dir}")
+    # # Save tokenizer as a pickle file to the log directory
+    # tokenizer_save_path = os.path.join(trainer.log_dir, trainer.logger.name, trainer.logger.version)
+    # os.makedirs(tokenizer_save_path, exist_ok=True)
+    # with open(os.path.join(tokenizer_save_path, 'tokenizer.pkl'), 'wb') as f:
+    #     pickle.dump(dm.tokenizer, file=f)
 
+    # cfg.datafiles.tokenizer_save_path = tokenizer_save_path
+    # run_logger.info(f"Tokenizer saved to {tokenizer_save_path}")
+    
+
+    # Initialise model
     classifier = models.SentimentClassifier(tokenizer=dm.tokenizer, 
                                             hyperparams=cfg.hyperparameters)
 
     # log gradients and model topology
     if wandb_logging:
         loggers['wandb_logger'].watch(classifier)
+
+        cfg.datafiles.saved_ckpt_dir = os.path.join(loggers['wandb_logger'].name, loggers['wandb_logger'].version, 'checkpoints')
+        run_logger.info(f"Model ckpts saved to {cfg.datafiles.saved_ckpt_dir}")
+
+    # # Save config file to log directory
+    # config_save_path = os.path.join(trainer.log_dir, trainer.logger.name, trainer.logger.version, 'config.yaml')
+    # with open(config_save_path, 'w') as f:
+    #     OmegaConf.save(config=cfg, f=f)
+        
+    # run_logger.info(f"Config saved to {config_save_path}")
 
     trainer.fit(classifier, datamodule=dm)
 

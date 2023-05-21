@@ -10,22 +10,30 @@ datafiles:
 
 data_processing:
     tokenizer:
-        object: transformers.CanineTokenizer.from_pretrained
+        object: custom_tokenizers.CharTokenizer
         kwargs: 
-            pretrained_model_name_or_path: 'google/canine-c'
+            vocab_size: 250
             return_tensors: 'pt'
+
     train_size: 0.6
     val_size: 0.2
     test_size: 0.2
 
 hyperparameters:
     backbone: 
-        object: transformers.models.canine.modeling_canine.CanineModel
+        object: transformer.TransformerEncoder
         kwargs: 
-            pretrained_model_name_or_path: 'google/canine-c'
-    batch_size: 16
+            embedding_dim: 128
+            hidden_size: 128
+            num_layers: 2
+            num_heads: 8
+            dropout: 0.1
+            
+    classifier_head:
+        num_layers: 1
+    batch_size: 32
     pin_memory: True
-    freeze_encoder: 0.5
+    freeze_encoder: 0
     num_classes: 3
     num_workers: 0
 
@@ -33,7 +41,7 @@ hyperparameters:
         object: torch.optim.AdamW
         lr:
           backbone: 1e-5
-          head: 1e-3
+          head: 1e-5
 
     scheduler:
         object: transformers.get_linear_schedule_with_warmup
@@ -46,36 +54,33 @@ hyperparameters:
         precision: '16-mixed'
         max_epochs: 250
         profiler: 'simple'
-        log_every_n_steps: 5
+        log_every_n_steps: 15
 
 loggers:
     wandb_logger:
         object: lightning.pytorch.loggers.WandbLogger
         kwargs:
             project: 'wandb-sentiment-analysis'
-            offline: False
+            offline: True
 
 callbacks:
-
-    slack_callback: True
-
-    print_table_metrics_callback: True
 
     learning_rate_monitor: 
         object: lightning.pytorch.callbacks.LearningRateMonitor
         kwargs:
             logging_interval: 'step'
     
-    # early_stopping_callback:
-    #     object: lightning.pytorch.callbacks.EarlyStopping
-    #     kwargs:
-    #         patience: 5
-    #         verbose: True
-    #         min_delta: 0.005
-    #         monitor: 'val_loss'
+    early_stopping_callback:
+        object: lightning.pytorch.callbacks.EarlyStopping
+        kwargs:
+            patience: 5
+            verbose: True
+            min_delta: 0.005
+            monitor: 'val_loss'
 
     checkpoint_callback:
         object: lightning.pytorch.callbacks.ModelCheckpoint
         kwargs:
             save_top_k: 2
             monitor: 'val_loss'
+

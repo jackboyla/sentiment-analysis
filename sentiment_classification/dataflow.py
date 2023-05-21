@@ -47,27 +47,7 @@ class TweetDataset(Dataset):
         encoded_input.update({'tweet': tweets, 'labels': labels})
         return encoded_input
     
-def embed_bag_collate_fn(batch, input_pad_token_id=0):
-    '''
-    Colatte fn for prepping batch before EmbeddingBag Layer
-    '''
-
-    attention_masks = [torch.tensor(sample['attention_mask']) for sample in batch]
-    attention_masks = torch.cat(attention_masks, dim=0)
-    input_ids = [torch.tensor(sample['input_ids']) for sample in batch]
-    offsets = torch.tensor([0] + [len(ids) for ids in input_ids[:-1]])
-    offsets = torch.cumsum(offsets, dim=0)
-    input_ids = torch.cat(input_ids, dim=0)
-    labels = [sample['labels'] for sample in batch]
-
-
-    return {'input_ids': input_ids, 'offsets': offsets, 'attention_mask': attention_masks}, torch.tensor(labels)
-
-def partial_embed_bag_collate_fn(b, input_pad_token_id):
-    return embed_bag_collate_fn(b, input_pad_token_id=input_pad_token_id)
-
-
-def collate_fn(batch, input_pad_token_id=0):
+def collate_fn(batch, input_pad_token_id):
     '''
     dynamically padding input sequences per batch
     batch is alist of dicts
@@ -84,9 +64,7 @@ def collate_fn(batch, input_pad_token_id=0):
     return {'input_ids': input_ids, 'attention_mask': attention_masks}, torch.tensor(labels)
 
 def partial_collate_fn(b, input_pad_token_id):
-    return collate_fn(b, input_pad_token_id=input_pad_token_id)
-
-
+    return collate_fn(b, input_pad_token_id)
 
 class TweetDataModule(L.pytorch.LightningDataModule):
     def __init__(self, cfg):
@@ -105,21 +83,37 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         https://pytorch-lightning.readthedocs.io/en/latest/data/datamodule.html#prepare-data
         """
 
-        df = pd.DataFrame()
+        # If we provide a dictionary of data files
+        if type(self.cfg.datafiles.data_dirs) != str:
+            df = pd.DataFrame()
 
-        for file, label in self.cfg.datafiles.data_dirs.items():
-            temp_df = pd.read_csv(file, sep='\t', **self.cfg.datafiles.get('kwargs', {})
-                                )
-            if label in ['positive', 'neutral', 'negative']:
-                temp_df['label'] = label
-            df = pd.concat([df, temp_df])
+            for file, label in self.cfg.datafiles.data_dirs.items():
+                temp_df = pd.read_csv(file, sep='\t', **self.cfg.datafiles.get('kwargs', {})
+                                    )
+                if label in ['positive', 'neutral', 'negative']:
+                    temp_df['label'] = label
+                df = pd.concat([df, temp_df])
+
+            def encode_sentiment(label):
+                return self.label_decode_map[label]
+
+            df['target'] = df['label'].apply(lambda x: encode_sentiment(x))
+        else:
+            DATASET_COLUMNS = ["target", "ids", "date", "flag", "user", "text"]
+            self.label_decode_map = {0: 0, 
+                                    4: 1}
+            df = pd.read_csv(
+                self.cfg.datafiles.data_dirs,
+                encoding=self.cfg.datafiles.dataset_encoding,
+                names=DATASET_COLUMNS
+                )
+            def binarize_sentiment(label):
+                return self.label_decode_map[int(label)]
+
+            df['target'] = df.target.apply(lambda x: binarize_sentiment(x))
 
         df.reset_index(inplace=True, drop=True)
 
-        def encode_sentiment(label):
-            return self.label_decode_map[label]
-
-        df['target'] = df['label'].apply(lambda x: encode_sentiment(x))
 
         train_size = int(self.cfg.data_processing.train_size if self.cfg.data_processing.train_size > 1.0 else self.cfg.data_processing.train_size*len(df))
         val_size = int(self.cfg.data_processing.val_size if self.cfg.data_processing.val_size > 1.0 else self.cfg.data_processing.val_size*len(df))
@@ -167,7 +161,6 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         return DataLoader(self.train_dataset, 
                               batch_size=self.cfg.hyperparameters.batch_size, 
                               shuffle=True, 
-                            #   collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
                               collate_fn=partial(partial_collate_fn, input_pad_token_id=self.tokenizer.pad_token_id),
                               num_workers=self.num_workers,
                               pin_memory=self.pin_memory
@@ -175,7 +168,6 @@ class TweetDataModule(L.pytorch.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.cfg.hyperparameters.batch_size, shuffle=False, 
-                        #   collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
                           collate_fn=partial(partial_collate_fn, input_pad_token_id=self.tokenizer.pad_token_id),
                           num_workers=self.num_workers,
                           pin_memory=self.pin_memory
@@ -184,11 +176,8 @@ class TweetDataModule(L.pytorch.LightningDataModule):
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.cfg.hyperparameters.batch_size, shuffle=False, 
-                                    #  collate_fn=lambda b: collate_fn(b, input_pad_token_id=self.tokenizer.pad_token_id),
                                     collate_fn=partial(partial_collate_fn, input_pad_token_id=self.tokenizer.pad_token_id),
                                      num_workers=self.num_workers,
                                      pin_memory=self.pin_memory
                                      )
-    
-
     

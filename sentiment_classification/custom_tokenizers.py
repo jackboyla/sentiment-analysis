@@ -72,6 +72,7 @@ class CharTokenizer(tokenization_canine.CanineTokenizer, tokenization_canine.Pre
         self._num_special_tokens = len(self._special_codepoints)
 
         self.vocab_to_id = self.get_vocabulary(train_sequences, vocab_size)
+        self.id_to_vocab = {v:k for k, v in self.vocab_to_id.items()}
         self._unicode_vocab_size = len(self.vocab_to_id)
 
 

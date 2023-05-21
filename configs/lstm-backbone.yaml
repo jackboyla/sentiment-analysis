@@ -24,22 +24,22 @@ hyperparameters:
         object: lstm.SentimentLSTM
         kwargs: 
             embedding_dim: 128
-            hidden_size: 128
+            hidden_size: 256
             num_layers: 2
             dropout: 0.1
             
     classifier_head:
         num_layers: 1
-    batch_size: 64
+    batch_size: 16
     pin_memory: True
     freeze_encoder: 0
     num_classes: 3
 
     optimizer:
-        object: torch.optim.Adam
+        object: torch.optim.SGD
         lr:
-          backbone: 1e-5
-          head: 1e-5
+            backbone: 1e-3
+            head: 1e-3
 
     scheduler:
         object: transformers.get_linear_schedule_with_warmup
@@ -52,7 +52,7 @@ hyperparameters:
         precision: '16-mixed'
         max_epochs: 250
         profiler: 'simple'
-        log_every_n_steps: 500
+        log_every_n_steps: 15
 
 loggers:
     wandb_logger:

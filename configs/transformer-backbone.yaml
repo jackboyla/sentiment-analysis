@@ -1,5 +1,6 @@
 seed: 42
 datafiles:
+    # data_dirs: 'data/training.1600000.processed.noemoticon.csv'
     data_dirs: {
         'data/science-challenge-master-data/negative': 'negative',
         'data/science-challenge-master-data/positive': 'positive',
@@ -7,38 +8,47 @@ datafiles:
         }
     kwargs: 
         names: ['text']
+    # dataset_encoding: 'ISO-8859-1'
 
 data_processing:
     tokenizer:
-        object: transformers.CanineTokenizer.from_pretrained
+        object: custom_tokenizers.CharTokenizer
         kwargs: 
-            pretrained_model_name_or_path: 'google/canine-c'
+            vocab_size: 250
             return_tensors: 'pt'
+
     train_size: 0.6
     val_size: 0.2
     test_size: 0.2
 
 hyperparameters:
     backbone: 
-        object: transformers.models.canine.modeling_canine.CanineModel
+        object: transformer.TransformerEncoder
         kwargs: 
-            pretrained_model_name_or_path: 'google/canine-c'
-    batch_size: 16
+            embedding_dim: 128
+            hidden_size: 128
+            num_layers: 2
+            num_heads: 2
+            dropout: 0.1
+            
+    classifier_head:
+        num_layers: 1
+    batch_size: 32
     pin_memory: True
-    freeze_encoder: 0.5
+    freeze_encoder: 0
     num_classes: 3
     num_workers: 0
 
     optimizer:
         object: torch.optim.AdamW
         lr:
-          backbone: 1e-5
-          head: 1e-3
+          backbone: 5.0
+          head: 5.0
 
     scheduler:
         object: transformers.get_linear_schedule_with_warmup
         kwargs:
-            num_warmup_steps: 1000
+            num_warmup_steps: 500
 
     trainer:
         accelerator: 'auto'
@@ -46,7 +56,7 @@ hyperparameters:
         precision: '16-mixed'
         max_epochs: 250
         profiler: 'simple'
-        log_every_n_steps: 5
+        log_every_n_steps: 15
 
 loggers:
     wandb_logger:
@@ -79,3 +89,4 @@ callbacks:
         kwargs:
             save_top_k: 2
             monitor: 'val_loss'
+

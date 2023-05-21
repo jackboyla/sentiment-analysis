@@ -4,12 +4,10 @@ import torch.nn as nn
 import math
 import utils
 
-from transformers.models.canine.modeling_canine import CanineEmbeddings
-
 class PositionalEncoding(nn.Module):
-    def __init__(self, embedding_dim, max_seq_len=5000):
+    def __init__(self, embedding_dim, dropout=0.1, max_seq_len=5000):
         super().__init__()
-        self.dropout = nn.Dropout(p=0.1)
+        self.dropout = nn.Dropout(dropout)
         self.embedding_dim = embedding_dim
 
         # Initialize the positional encoding matrix
@@ -36,48 +34,40 @@ class PositionalEncoding(nn.Module):
         return x
 
 
-
 class TransformerEncoder(nn.Module):
     def __init__(self, cfg):
         super(TransformerEncoder, self).__init__()
+        
+        self.hidden_size = cfg.hidden_size
+        self.input_size = cfg.input_size
+        self.embedding_dim = cfg.embedding_dim
+        self.dropout = cfg.dropout
+        self.num_heads = cfg.num_heads
+        self.num_layers = cfg.num_layers
         self.cfg = cfg
 
         if 'embedding' in cfg:
-            self.embedding = utils.load_obj(cfg.embedding.object)(cfg)
+            self.embedding = utils.load_obj(self.cfg.embedding.object)(self.cfg)
         else:
-            self.embedding = nn.Embedding(cfg.input_size, cfg.embedding_dim)
+            self.embedding = nn.Embedding(num_embeddings=self.input_size, 
+                                          embedding_dim=self.embedding_dim)
 
-        self.pos_encoder = PositionalEncoding(cfg.hidden_size)
+        self.pos_encoder = PositionalEncoding(self.hidden_size, self.dropout)
         encoder_layer = nn.TransformerEncoderLayer(
-            cfg.hidden_size, cfg.num_heads, 
-            cfg.hidden_size, cfg.dropout, 
+            d_model=self.hidden_size, 
+            nhead=self.num_heads, 
+            dropout=self.dropout, 
             batch_first=True
             )
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, cfg.num_layers)
-        self.dropout = nn.Dropout(cfg.dropout)
-        self.hidden_size = cfg.hidden_size
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, self.num_layers)
         
     def forward(self, input_ids, attention_mask, output_hidden_states=True):
         x = self.embedding(input_ids)  # [B, seq_len, hidden_dim]
-        # x = self.pos_encoder(x)
+        x = self.pos_encoder(x)
         x = self.transformer_encoder(x)
         x = x.mean(dim=1)
-        x = self.dropout(x)
         return {'pooler_output': x}
 
-
-        
-    # def forward(self, x):
-    #     embedded = self.embedding(x)
-    #     embedded = embedded.permute(1, 0, 2) # switch batch_size and sequence_length dimensions
-    #     encoded = self.transformer_encoder(embedded)
-    #     encoded = encoded.permute(1, 0, 2) # switch back
-    #     pooled = F.avg_pool1d(encoded.transpose(1,2), encoded.shape[1]).squeeze(2) # average pooling across sequence length
-    #     x = self.dropout(pooled)
-    #     x = F.relu(self.fc1(x))
-    #     x = self.dropout(x)
-    #     x = self.fc2(x)
-    #     return x
 
 
 
