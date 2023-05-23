@@ -53,9 +53,6 @@ class SentimentClassifier(pl.LightningModule):
             nn.LogSoftmax(dim=1)
             )
         
-        # # Initialization
-        # for m in [self.encoder, self.classifier_head]:
-        #     self.init_weights(m)
 
         # Loss + Metrics
         # self.criterion = torch.nn.CrossEntropyLoss()
@@ -63,6 +60,7 @@ class SentimentClassifier(pl.LightningModule):
 
         self.train_acc = torchmetrics.classification.MulticlassAccuracy(num_classes=self.num_classes, average='micro')
         self.val_acc = torchmetrics.classification.MulticlassAccuracy(num_classes=self.num_classes, average='micro')
+        self.test_acc = torchmetrics.classification.MulticlassAccuracy(num_classes=self.num_classes, average='micro')
   
         self.train_f1 = torchmetrics.classification.MulticlassF1Score(num_classes=self.num_classes, average='macro')
         self.val_f1 = torchmetrics.classification.MulticlassF1Score(num_classes=self.num_classes, average='macro')
@@ -116,6 +114,7 @@ class SentimentClassifier(pl.LightningModule):
         test_loss = self.criterion(logits, labels)
         self.test_f1(logits, labels)
         self.log("test_loss", test_loss, on_step=True)
+        self.log('test_acc', self.test_acc)
         self.log('test_F1', self.test_f1)
 
     def configure_optimizers(self):
