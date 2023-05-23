@@ -34,13 +34,12 @@ class PositionalEncoding(nn.Module):
         return x
 
 
-class TransformerEncoder(nn.Module):
+class TransformerEncoderModel(nn.Module):
     def __init__(self, cfg):
-        super(TransformerEncoder, self).__init__()
+        super(TransformerEncoderModel, self).__init__()
         
         self.hidden_size = cfg.hidden_size
         self.input_size = cfg.input_size
-        self.embedding_dim = cfg.embedding_dim
         self.dropout = cfg.dropout
         self.num_heads = cfg.num_heads
         self.num_layers = cfg.num_layers
@@ -49,22 +48,26 @@ class TransformerEncoder(nn.Module):
         if 'embedding' in cfg:
             self.embedding = utils.load_obj(self.cfg.embedding.object)(self.cfg)
         else:
+            self.embedding_dim = cfg.embedding_dim
             self.embedding = nn.Embedding(num_embeddings=self.input_size, 
-                                          embedding_dim=self.embedding_dim)
+                                          embedding_dim=self.embedding_dim,
+                                          padding_idx=0)
 
         self.pos_encoder = PositionalEncoding(self.hidden_size, self.dropout)
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=self.hidden_size, 
             nhead=self.num_heads, 
+            dim_feedforward=self.hidden_size,
             dropout=self.dropout, 
             batch_first=True
             )
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, self.num_layers)
+ 
         
-    def forward(self, input_ids, attention_mask, output_hidden_states=True):
+    def forward(self, input_ids, src_key_padding_mask, attention_mask=None, token_type_ids=None, output_hidden_states=True):
         x = self.embedding(input_ids)  # [B, seq_len, hidden_dim]
         x = self.pos_encoder(x)
-        x = self.transformer_encoder(x)
+        x = self.transformer_encoder(x, src_key_padding_mask=src_key_padding_mask)
         x = x.mean(dim=1)
         return {'pooler_output': x}
 
