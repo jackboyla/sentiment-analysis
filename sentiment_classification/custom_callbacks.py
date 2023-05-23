@@ -10,6 +10,7 @@ import copy
 import requests
 import datetime
 import os
+import torch
 
 import sys
 import logging
@@ -66,6 +67,24 @@ class CheckBatchGradient(L.pytorch.callbacks.Callback):
         
         if example_input.grad[zero_grad_inds].abs().sum().item() > 0:
             raise RuntimeError("Your model mixes data across the batch dimension!")
+        
+
+class VanishingGradientCallback(L.pytorch.callbacks.Callback):
+    def __init__(self, threshold=1e-5):
+        super().__init__()
+        self.threshold = threshold
+
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        # Iterate over the parameters and check their gradient norms
+        for name, param in pl_module.named_parameters():
+            if param.grad is not None:
+                grad_norm = param.grad.norm().item()
+                if grad_norm < self.threshold:
+                    rank_zero_info(f"Vanishing gradient detected in parameter '{name}': {grad_norm}")
+        
+        if torch.isnan(outputs['loss']):
+            trainer.should_stop = True
+            rank_zero_info("Training stopped due to NaN loss.")
 
 
 class SlackCallback(L.pytorch.callbacks.Callback):
