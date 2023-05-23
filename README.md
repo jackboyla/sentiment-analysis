@@ -22,7 +22,7 @@ conda create -n sentiment-analysis python=3.11
 conda activate sentiment-analysis
 
 # Installation 
-pip install -r requirements.txt
+cd <folder you have cloned/downloaded repo to> && make dev
 ```
 
 ## Usage
