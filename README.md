@@ -18,7 +18,7 @@ In exchange, character level NLP models solve a number of problems:
 ## Getting Started
 ```
 # create a new environment
-conda create -n sentiment-analysis python=3.11
+conda create -n sentiment-analysis python=3.8
 conda activate sentiment-analysis
 
 # Installation 
