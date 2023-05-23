@@ -7,16 +7,13 @@ def main():
     import model as models
     import utils
     import custom_callbacks
-
     import lightning as L
     from omegaconf import OmegaConf
     import time
     import wandb
     import pickle
     import argparse
-
     import psutil
-    import logging
 
 
     parser = argparse.ArgumentParser()
@@ -104,8 +101,7 @@ def main():
         return num_workers
 
     if 'num_workers' not in cfg.hyperparameters:
-        # num_workers = set_num_workers()
-        num_workers = 2
+        num_workers = set_num_workers()
         cfg.hyperparameters.num_workers = num_workers
         
     run_logger.info(f"num_workers assigned for DataLoader: {cfg.hyperparameters.num_workers}")
@@ -160,17 +156,7 @@ def main():
             if callback not in callbacks:
                 callbacks[callback] = (utils.load_obj(values.object)(**values.get('kwargs', {})))
 
-
-
-    # -----------------------------------------------------------------------
-    # # PROFILER
-    # from lightning.pytorch.profilers import PyTorchProfiler
-
-    # pytorch_profiler = PyTorchProfiler(profile_memory = True, 
-    #                                    sort_by_key='cuda_memory_usage',
-    #                                    )
-    # cfg.hyperparameters.trainer.profiler = pytorch_profiler
-
+    callbacks['vanishing_gradient_callback'] = custom_callbacks.VanishingGradientCallback(threshold=1e-5)
 
     # -----------------------------------------------------
     # TRAIN
@@ -180,19 +166,29 @@ def main():
                         **cfg.hyperparameters.get('trainer', {}),
                         )
     
-    # # Save tokenizer as a pickle file to the log directory
-    # tokenizer_save_path = os.path.join(trainer.log_dir, trainer.logger.name, trainer.logger.version)
-    # os.makedirs(tokenizer_save_path, exist_ok=True)
-    # with open(os.path.join(tokenizer_save_path, 'tokenizer.pkl'), 'wb') as f:
-    #     pickle.dump(dm.tokenizer, file=f)
+    # Save tokenizer as a pickle file to the log directory
+    tokenizer_save_dir = os.path.join(trainer.log_dir, trainer.logger.name, trainer.logger.version)
+    os.makedirs(tokenizer_save_dir, exist_ok=True)
+    tokenizer_save_path = os.path.join(tokenizer_save_dir, 'tokenizer.pkl')
+    with open(tokenizer_save_path, 'wb') as f:
+        pickle.dump(dm.tokenizer, file=f)
 
-    # cfg.datafiles.tokenizer_save_path = tokenizer_save_path
-    # run_logger.info(f"Tokenizer saved to {tokenizer_save_path}")
+    cfg.datafiles.tokenizer_save_path = tokenizer_save_path
+    run_logger.info(f"Tokenizer saved to {tokenizer_save_path}")
     
 
     # Initialise model
     classifier = models.SentimentClassifier(tokenizer=dm.tokenizer, 
                                             hyperparams=cfg.hyperparameters)
+    
+    
+    # Save architecture to log directory
+    architecture_save_path = os.path.join(trainer.log_dir, trainer.logger.name, trainer.logger.version, 'architecture.pkl')
+    with open(architecture_save_path, 'wb') as f:
+        pickle.dump(classifier, f)
+
+    cfg.datafiles.architecture_save_path = architecture_save_path
+    run_logger.info(f"Architecture saved to {architecture_save_path}")
 
     # log gradients and model topology
     if wandb_logging:
@@ -201,17 +197,18 @@ def main():
         cfg.datafiles.saved_ckpt_dir = os.path.join(loggers['wandb_logger'].name, loggers['wandb_logger'].version, 'checkpoints')
         run_logger.info(f"Model ckpts saved to {cfg.datafiles.saved_ckpt_dir}")
 
-    # # Save config file to log directory
-    # config_save_path = os.path.join(trainer.log_dir, trainer.logger.name, trainer.logger.version, 'config.yaml')
-    # with open(config_save_path, 'w') as f:
-    #     OmegaConf.save(config=cfg, f=f)
+    # Save config file to log directory
+    config_save_path = os.path.join(trainer.log_dir, trainer.logger.name, trainer.logger.version, 'config.yaml')
+    with open(config_save_path, 'w') as f:
+        OmegaConf.save(config=cfg, f=f)
         
-    # run_logger.info(f"Config saved to {config_save_path}")
+    run_logger.info(f"Config saved to {config_save_path}")
 
     trainer.fit(classifier, datamodule=dm)
 
     if wandb_logging:
         loggers['wandb_logger'].experiment.unwatch(classifier)
+
 
     # # ----------------------------------------------------
     # # TEST
