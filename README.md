@@ -58,7 +58,7 @@ Alternatively, you can train on a Vast.ai instance. Read [VastAIRun.md](VstAIRun
 To run inference, you must specify a config file to load the model from:
 
 ```
-python sentiment_classification/predict.py --cfg-path=wandb-sentiment-analysis/4q1luinh/config.yaml --input=input.txt --output=preds.txt
+python sentiment_classification/predict.py --cfg-path=wandb-sentiment-analysis/387ns7r1/config.yaml --input=input.txt --output=preds.txt
 ```
 
 This will produce a file `output.txt` that reads:
