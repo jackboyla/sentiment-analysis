@@ -1,4 +1,6 @@
 seed: 42
+debug_dataflow: True
+
 datafiles:
     data_dirs: {
         'data/science-challenge-master-data/negative': 'negative',
@@ -22,11 +24,13 @@ data_processing:
 hyperparameters:
     backbone:
         object: simple_embedding.JustEmbeddingEncoder
+        required_args: {'input_ids'}
         kwargs: 
-            embedding_dim: 96
+            embedding_dim: 256
             
     classifier_head:
         num_layers: 1
+
     batch_size: 64
     pin_memory: True
     freeze_encoder: 0
@@ -34,19 +38,25 @@ hyperparameters:
     num_workers: 0
 
     optimizer:
-        object: torch.optim.Adam
+        object: torch.optim.AdamW
         lr:
-            backbone: 1e-2
-            head: 1e-2
+            backbone: 1e-4
+            head: 1e-4
 
-    scheduler:
-        object: transformers.get_linear_schedule_with_warmup
-        kwargs:
-            num_warmup_steps: 0
+    # scheduler:
+    #     # object: transformers.get_linear_schedule_with_warmup
+    #     object: torch.optim.lr_scheduler.ExponentialLR
+    #     kwargs:
+    #         num_warmup_steps: 0
+    #         # step_size: 1.0
+    #         gamma: 0.6
+    #         # eta_min: 1e-5
+    #         interval: 'epoch'
+    #         frequency: 1
 
     trainer:
         accelerator: 'auto'
-        enable_progress_bar: True
+        enable_progress_bar: False
         precision: '16-mixed'
         max_epochs: 250
         profiler: 'simple'

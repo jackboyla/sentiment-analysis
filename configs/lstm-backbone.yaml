@@ -1,4 +1,6 @@
 seed: 42
+debug_dataflow: True
+
 datafiles:
     data_dirs: {
         'data/science-challenge-master-data/negative': 'negative',
@@ -22,35 +24,41 @@ data_processing:
 hyperparameters:
     backbone:
         object: lstm.SentimentLSTM
+        required_args: {'input_ids', 'sorted_lengths'}
         kwargs: 
-            embedding_dim: 128
-            hidden_size: 256
-            num_layers: 2
-            dropout: 0.1
+            embedding_dim: 64
+            hidden_size: 64
+            num_layers: 1
+            dropout: 0.0
+            bidirectional: True
             
     classifier_head:
         num_layers: 1
-    batch_size: 16
+
+    batch_size: 64
     pin_memory: True
     freeze_encoder: 0
     num_classes: 3
+    num_workers: 0
 
     optimizer:
-        object: torch.optim.SGD
+        object: torch.optim.Adam
         lr:
-            backbone: 1e-3
-            head: 1e-3
+            backbone: 5e-3
+            head: 5e-3
 
     scheduler:
         object: transformers.get_linear_schedule_with_warmup
         kwargs:
             num_warmup_steps: 0
+            interval: 'step'
+            frequency: 1
 
     trainer:
         accelerator: 'auto'
         enable_progress_bar: True
         precision: '16-mixed'
-        max_epochs: 250
+        max_epochs: 150
         profiler: 'simple'
         log_every_n_steps: 15
 
@@ -72,13 +80,13 @@ callbacks:
         kwargs:
             logging_interval: 'step'
     
-    early_stopping_callback:
-        object: lightning.pytorch.callbacks.EarlyStopping
-        kwargs:
-            patience: 5
-            verbose: True
-            min_delta: 0.005
-            monitor: 'val_loss'
+    # early_stopping_callback:
+    #     object: lightning.pytorch.callbacks.EarlyStopping
+    #     kwargs:
+    #         patience: 5
+    #         verbose: True
+    #         min_delta: 0.005
+    #         monitor: 'val_loss'
 
     checkpoint_callback:
         object: lightning.pytorch.callbacks.ModelCheckpoint

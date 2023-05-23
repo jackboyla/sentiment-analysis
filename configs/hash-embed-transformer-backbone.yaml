@@ -1,4 +1,6 @@
 seed: 42
+debug_dataflow: True
+
 datafiles:
     data_dirs: {
         'data/science-challenge-master-data/negative': 'negative',
@@ -20,9 +22,10 @@ data_processing:
 
 hyperparameters:
     backbone: 
-        object: transformer.TransformerEncoder
+        object: transformer.TransformerEncoderModel
+        required_args: {'input_ids', 'src_key_padding_mask'}
         kwargs: 
-            hidden_size: 128
+            hidden_size: 256
             num_layers: 2
             num_heads: 2
             dropout: 0.1
@@ -30,37 +33,44 @@ hyperparameters:
             embedding: 
                 object: transformers.models.canine.modeling_canine.CanineEmbeddings
             num_hash_functions: 4
-            num_hash_buckets: 5000 # 16384
+            num_hash_buckets: 250 # 16384
             type_vocab_size: 16
             layer_norm_eps: 1e-12
             hidden_dropout_prob: 0.1
-            max_position_embeddings: 5000 # 16384
+            max_position_embeddings: 250 # 16384
 
     classifier_head:
         num_layers: 1
+
     batch_size: 64
     pin_memory: True
     freeze_encoder: 0
     num_classes: 3
 
     optimizer:
-        object: torch.optim.Adam
+        object: torch.optim.AdamW
         lr:
-          backbone: 1e-5
-          head: 1e-5
+          backbone: 3.0
+          head: 3.0
 
     scheduler:
-        object: transformers.get_linear_schedule_with_warmup
+        # object: transformers.get_linear_schedule_with_warmup
+        object: torch.optim.lr_scheduler.ExponentialLR
         kwargs:
             num_warmup_steps: 0
+            # step_size: 1.0
+            gamma: 0.5
+            # eta_min: 1e-5
+            interval: 'epoch'
+            frequency: 1
 
     trainer:
         accelerator: 'auto'
-        enable_progress_bar: True
+        enable_progress_bar: False
         precision: '16-mixed'
-        max_epochs: 250
+        max_epochs: 5
         profiler: 'simple'
-        log_every_n_steps: 500
+        log_every_n_steps: 15
 
 loggers:
     wandb_logger:
@@ -70,13 +80,13 @@ loggers:
             offline: False
 
 callbacks:
-    early_stopping_callback:
-        object: lightning.pytorch.callbacks.EarlyStopping
-        kwargs:
-            patience: 5
-            verbose: True
-            min_delta: 0.05
-            monitor: 'val_loss'
+    # early_stopping_callback:
+    #     object: lightning.pytorch.callbacks.EarlyStopping
+    #     kwargs:
+    #         patience: 5
+    #         verbose: True
+    #         min_delta: 0.05
+    #         monitor: 'val_loss'
 
     learning_rate_monitor: 
         object: lightning.pytorch.callbacks.LearningRateMonitor
