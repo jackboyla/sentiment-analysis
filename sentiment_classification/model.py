@@ -3,6 +3,7 @@ import torchmetrics
 import lightning.pytorch as pl
 import utils
 import transformers
+import inspect
 
 run_logger = utils.create_logger(__name__)
 
@@ -12,6 +13,7 @@ class SentimentClassifier(pl.LightningModule):
         
         self.cfg = hyperparams
         self.tokenizer = tokenizer
+        self.required_args = self.cfg.backbone.required_args
 
         self.backbone_lr = self.cfg.optimizer.lr.backbone
         self.head_lr = self.cfg.optimizer.lr.head
@@ -45,13 +47,19 @@ class SentimentClassifier(pl.LightningModule):
         # Define Classifier Head
         self.num_classes = self.cfg.num_classes
         self.classifier_head = nn.Sequential(
-            # nn.Linear(self.hidden_size, self.hidden_size),
-            # nn.ReLU(),
+            nn.Linear(self.hidden_size, self.hidden_size),
+            nn.ReLU(),
             nn.Linear(self.hidden_size, self.num_classes),
+            nn.LogSoftmax(dim=1)
             )
+        
+        # # Initialization
+        # for m in [self.encoder, self.classifier_head]:
+        #     self.init_weights(m)
 
         # Loss + Metrics
-        self.criterion = torch.nn.CrossEntropyLoss()
+        # self.criterion = torch.nn.CrossEntropyLoss()
+        self.criterion = torch.nn.NLLLoss()
 
         self.train_acc = torchmetrics.classification.MulticlassAccuracy(num_classes=self.num_classes, average='micro')
         self.val_acc = torchmetrics.classification.MulticlassAccuracy(num_classes=self.num_classes, average='micro')
@@ -62,6 +70,7 @@ class SentimentClassifier(pl.LightningModule):
 
 
     def get_logits(self, inputs):
+        inputs = {key: value for key, value in inputs.items() if key in self.required_args}
         encoder_output = self.encoder(**inputs, output_hidden_states=True) 
         pooled_output = encoder_output['pooler_output']  # [B, hidden_size]
         pooled_output = self.dropout(pooled_output)
@@ -86,7 +95,7 @@ class SentimentClassifier(pl.LightningModule):
         loss = self.criterion(logits, labels)
         self.train_acc(logits, labels)
         self.train_f1(logits, labels)
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, prog_bar=True)
         self.log('train_acc', self.train_acc)
         self.log('train_F1', self.train_f1)
         return loss
@@ -127,13 +136,28 @@ class SentimentClassifier(pl.LightningModule):
         optimizer = utils.load_obj(self.cfg.optimizer.object)
         optimizer = optimizer(grouped_parameters, **self.cfg.optimizer.get('kwargs', {}))
 
-        if 'scheduler' in self.cfg.scheduler:
-            scheduler = utils.load_obj(self.cfg.scheduler.object)
-            scheduler = scheduler(optimizer,
-                                  num_training_steps=self.trainer.estimated_stepping_batches, 
-                                  **self.cfg.scheduler.get('kwargs', {}))
+        if 'scheduler' in self.cfg:
 
-            scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
+            scheduler = utils.load_obj(self.cfg.scheduler.object)
+
+            # Get the parameter names of the function
+            scheduler_params = inspect.signature(scheduler).parameters
+
+            # Extract the keyword arguments from the dictionary based on the function's parameter names
+            scheduler_kwargs = {}
+            scheduler_kwargs['num_training_steps'] = self.trainer.estimated_stepping_batches
+            scheduler_kwargs['T_max'] = self.trainer.estimated_stepping_batches
+            scheduler_kwargs.update(self.cfg.scheduler.kwargs)
+            scheduler_kwargs = {param: scheduler_kwargs.get(param) for param in scheduler_params if param in scheduler_kwargs}
+
+            
+            scheduler = scheduler(optimizer,
+                                  **scheduler_kwargs)
+
+            scheduler = {"scheduler": scheduler, 
+                         "interval": self.cfg.scheduler.kwargs.interval, 
+                         "frequency": self.cfg.scheduler.kwargs.frequency}
             return [optimizer], [scheduler]
+        
         return [optimizer]
 
