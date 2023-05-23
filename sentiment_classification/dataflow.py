@@ -13,6 +13,8 @@ from transformers import AutoTokenizer
 from functools import partial
 import html
 
+run_logger = utils.create_logger(__name__)
+
 def convert_html_entities(text):
     return html.unescape(text)
 
@@ -199,6 +201,7 @@ class TweetDataModule(L.pytorch.LightningDataModule):
         https://pytorch-lightning.readthedocs.io/en/latest/data/datamodule.html#setup
         """
         if self.cfg.debug_dataflow:
+            run_logger.info("Debug Random Dataset in use!")
             num_classes = 3
             num_samples = num_classes * 100
             seq_len = 32

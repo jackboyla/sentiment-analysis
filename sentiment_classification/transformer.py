@@ -64,7 +64,7 @@ class TransformerEncoderModel(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, self.num_layers)
  
         
-    def forward(self, input_ids, src_key_padding_mask, attention_mask=None, token_type_ids=None, output_hidden_states=True):
+    def forward(self, input_ids, src_key_padding_mask=None, attention_mask=None, token_type_ids=None, output_hidden_states=True):
         x = self.embedding(input_ids)  # [B, seq_len, hidden_dim]
         x = self.pos_encoder(x)
         x = self.transformer_encoder(x, src_key_padding_mask=src_key_padding_mask)
