@@ -1,4 +1,6 @@
 seed: 42
+debug_dataflow: False
+
 datafiles:
     data_dirs: {
         'data/science-challenge-master-data/negative': 'negative',
@@ -14,6 +16,7 @@ data_processing:
         kwargs: 
             pretrained_model_name_or_path: 'google/canine-c'
             return_tensors: 'pt'
+
     train_size: 0.6
     val_size: 0.2
     test_size: 0.2
@@ -21,9 +24,10 @@ data_processing:
 hyperparameters:
     backbone: 
         object: transformers.models.canine.modeling_canine.CanineModel
+        required_args: {'input_ids', 'attention_mask'}
         kwargs: 
             pretrained_model_name_or_path: 'google/canine-c'
-    batch_size: 16
+    batch_size: 64
     pin_memory: True
     freeze_encoder: 0.5
     num_classes: 3
@@ -33,16 +37,16 @@ hyperparameters:
         object: torch.optim.AdamW
         lr:
           backbone: 1e-5
-          head: 1e-3
+          head: 1e-5
 
     scheduler:
-        object: transformers.get_linear_schedule_with_warmup
+        object: transformers.get_constant_schedule_with_warmup
         kwargs:
-            num_warmup_steps: 1000
+            num_warmup_steps: 2000
 
     trainer:
         accelerator: 'auto'
-        enable_progress_bar: True
+        enable_progress_bar: False
         precision: '16-mixed'
         max_epochs: 250
         profiler: 'simple'

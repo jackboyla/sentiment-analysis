@@ -65,10 +65,10 @@ class TransformerEncoderModel(nn.Module):
  
         
     def forward(self, input_ids, src_key_padding_mask=None, attention_mask=None, token_type_ids=None, output_hidden_states=True):
-        x = self.embedding(input_ids)  # [B, seq_len, hidden_dim]
+        x = self.embedding(input_ids)   # [B, seq_len, hidden_dim]
         x = self.pos_encoder(x)
         x = self.transformer_encoder(x, src_key_padding_mask=src_key_padding_mask)
-        x = x.mean(dim=1)
+        x = x.mean(dim=1)               # [B, hidden_dim]
         return {'pooler_output': x}
 
 

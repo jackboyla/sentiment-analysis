@@ -2,7 +2,6 @@ seed: 42
 debug_dataflow: False
 
 datafiles:
-    # data_dirs: 'data/training.1600000.processed.noemoticon.csv'
     data_dirs: {
         'data/science-challenge-master-data/negative': 'negative',
         'data/science-challenge-master-data/positive': 'positive',
@@ -10,7 +9,6 @@ datafiles:
         }
     kwargs: 
         names: ['text']
-    # dataset_encoding: 'ISO-8859-1'
 
 data_processing:
     tokenizer:
@@ -24,15 +22,18 @@ data_processing:
     test_size: 0.2
 
 hyperparameters:
-    backbone: 
-        object: transformer.TransformerEncoderModel
-        required_args: {'input_ids', 'src_key_padding_mask'}
+    backbone:
+        object: lstm.SentimentConvLSTM
+        required_args: {'input_ids', 'sorted_lengths'}
         kwargs: 
-            embedding_dim: 128
-            hidden_size: 128
-            num_layers: 2
-            num_heads: 2
-            dropout: 0.1
+            embedding_dim: 64
+            hidden_size: 64
+            conv1d_filters: 32
+            conv1d_kernel_size: 3
+            max_pool_kernel_size: 2
+            num_layers: 1
+            dropout: 0.0
+            bidirectional: True
             
     classifier_head:
         num_layers: 1
@@ -46,8 +47,8 @@ hyperparameters:
     optimizer:
         object: torch.optim.AdamW
         lr:
-          backbone: 2e-5
-          head: 2e-5
+            backbone: 5e-3
+            head: 5e-3
 
     scheduler:
         # object: transformers.get_linear_schedule_with_warmup

@@ -113,6 +113,7 @@ class SentimentClassifier(pl.LightningModule):
         logits = self.get_logits(inputs)
         test_loss = self.criterion(logits, labels)
         self.test_f1(logits, labels)
+        self.test_acc(logits, labels)
         self.log("test_loss", test_loss, on_step=True)
         self.log('test_acc', self.test_acc)
         self.log('test_F1', self.test_f1)
