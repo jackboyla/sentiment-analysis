@@ -32,7 +32,6 @@ class SentimentLSTM(nn.Module):
                             bidirectional=self.bidirectional,
                             batch_first=True)
         
-        self.dropout2d = nn.Dropout2d(cfg.dropout2d)
         self.dropout = nn.Dropout(cfg.dropout)
         
         
@@ -40,17 +39,14 @@ class SentimentLSTM(nn.Module):
 
         B = input_ids.shape[0]
         x = self.embedding(input_ids)
-        x = self.dropout2d(x)
-        x = pack_padded_sequence(x, sorted_lengths, batch_first=True) # unpad
-        hidden = self.init_hidden(B)
+        x = self.dropout(x)
+        # x = pack_padded_sequence(x, sorted_lengths, batch_first=True) # unpad
         output, (hidden, _) = self.lstm(x)
-        # output, lengths = pad_packed_sequence(output)
-        # last_hidden_state = self.hidden.squeeze()
-        last_output = output[:, -1, :]
-        last_output = self.dropout(last_output)
 
-        return {'pooler_output': last_output,
-                'hidden': hidden}
+        last_hidden_state = hidden[-1, :, :]
+        last_hidden_state = self.dropout(last_hidden_state)
+
+        return {'pooler_output': last_hidden_state}
     
 
 class SentimentConvLSTM(nn.Module):
@@ -95,7 +91,6 @@ class SentimentConvLSTM(nn.Module):
                             bidirectional=self.bidirectional,
                             batch_first=True)
         
-        self.dropout2d = nn.Dropout2d(cfg.dropout2d)
         self.dropout = nn.Dropout(cfg.dropout)
         
         
@@ -103,17 +98,18 @@ class SentimentConvLSTM(nn.Module):
 
         B = input_ids.shape[0]                  # [B, seq_len]
         x = self.embedding(input_ids)           # [B, seq_len, embed_dim]
-        x = self.dropout2d(x)
+        x = self.dropout(x)
         x = x.permute(0, 2, 1)                  # [B, embed_dim, seq_len]
         x = self.conv1d(x)                      # [B, conv_filters, seq_len]
         x = self.relu(x)
         x = self.max_pool(x)                    # [B, conv_filters, (seq_len / pool_kernel)]
         x = x.permute(0, 2, 1)                  # [B, (seq_len / pool_kernel), conv_filters]
+        x = self.dropout(x)
         output, (hidden, _) = self.lstm(x) 
+        
         # Use the output of the last timestep for classification
-        last_output = output[:, -1, :]
-        last_output = self.dropout(last_output)
+        last_hidden_state = hidden[-1, :, :]
+        last_hidden_state = self.dropout(last_hidden_state)
 
-        return {'pooler_output': last_output,
-                'hidden': hidden}
+        return {'pooler_output': last_hidden_state}
     
