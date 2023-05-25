@@ -28,6 +28,7 @@ hyperparameters:
         required_args: {'input_ids'}
         kwargs: 
             embedding_dim: 64
+            dropout2d: 0.5
             dropout: 0.3
             num_filters: 32
             kernel_sizes: [3]

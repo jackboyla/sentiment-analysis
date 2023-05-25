@@ -32,6 +32,7 @@ class SentimentLSTM(nn.Module):
                             bidirectional=self.bidirectional,
                             batch_first=True)
         
+        self.dropout2d = nn.Dropout2d(cfg.dropout2d)
         self.dropout = nn.Dropout(cfg.dropout)
         
     def init_hidden(self, batch_size):
@@ -47,6 +48,7 @@ class SentimentLSTM(nn.Module):
 
         B = input_ids.shape[0]
         x = self.embedding(input_ids)
+        x = self.dropout2d(x)
         x = pack_padded_sequence(x, sorted_lengths, batch_first=True) # unpad
         self.hidden = self.init_hidden(B)
         output, (self.hidden, _) = self.lstm(x, self.hidden)
@@ -100,6 +102,7 @@ class SentimentConvLSTM(nn.Module):
                             bidirectional=self.bidirectional,
                             batch_first=True)
         
+        self.dropout2d = nn.Dropout2d(cfg.dropout2d)
         self.dropout = nn.Dropout(cfg.dropout)
         
     def init_hidden(self, batch_size):
@@ -115,6 +118,7 @@ class SentimentConvLSTM(nn.Module):
 
         B = input_ids.shape[0]                  # [B, seq_len]
         x = self.embedding(input_ids)           # [B, seq_len, embed_dim]
+        x = self.dropout2d(x)
         x = x.permute(0, 2, 1)                  # [B, embed_dim, seq_len]
         x = self.conv1d(x)                      # [B, conv_filters, seq_len]
         x = self.relu(x)

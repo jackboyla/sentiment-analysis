@@ -31,10 +31,12 @@ class Sentiment2dCNN(nn.Module):
         ])
         
         # Dropout
+        self.dropout2d = nn.Dropout2d(cfg.dropout2d)
         self.dropout = nn.Dropout(self.dropout)
         
     def forward(self, input_ids, sorted_lengths=None, src_key_padding_mask=None, attention_mask=None, token_type_ids=None, output_hidden_states=True):
         x = self.embedding(input_ids)  # [B, seq_len, embed_dim]
+        x = self.dropout2d(x)
         
         # Add a channel dimension for conv2d
         x = x.unsqueeze(1) # [B, 1, seq_len, embed_dim]
