@@ -32,6 +32,8 @@ class SentimentLSTM(nn.Module):
                             bidirectional=self.bidirectional,
                             batch_first=True)
         
+        self.dropout = nn.Dropout(cfg.dropout)
+        
     def init_hidden(self, batch_size):
         ''' Initializes hidden state '''
         # Create two new tensors with sizes n_layers x batch_size x hidden_dim,
@@ -49,10 +51,11 @@ class SentimentLSTM(nn.Module):
         self.hidden = self.init_hidden(B)
         output, (self.hidden, _) = self.lstm(x, self.hidden)
         # output, lengths = pad_packed_sequence(output)
-        last_hidden_state = self.hidden[-1]
         # last_hidden_state = self.hidden.squeeze()
+        last_output = output[-1]
+        last_output = self.dropout(last_output)
 
-        return {'pooler_output': last_hidden_state}
+        return {'pooler_output': last_output}
     
 
 class SentimentConvLSTM(nn.Module):
@@ -97,6 +100,8 @@ class SentimentConvLSTM(nn.Module):
                             bidirectional=self.bidirectional,
                             batch_first=True)
         
+        self.dropout = nn.Dropout(cfg.dropout)
+        
     def init_hidden(self, batch_size):
         ''' Initializes hidden state '''
         # Create two new tensors with sizes n_layers x batch_size x hidden_dim,
@@ -116,10 +121,10 @@ class SentimentConvLSTM(nn.Module):
         x = self.max_pool(x)                    # [B, conv_filters, (seq_len / pool_kernel)]
         x = x.permute(0, 2, 1)                  # [B, (seq_len / pool_kernel), conv_filters]
         self.hidden = self.init_hidden(B)
-        output, (self.hidden, _) = self.lstm(x, self.hidden) # hidden [2, B, hidden_size]
-        # output, lengths = pad_packed_sequence(output)
-        last_hidden_state = self.hidden[-1]     # [B, hidden_size]
-        # last_hidden_state = self.hidden.squeeze()
+        output, (self.hidden, _) = self.lstm(x, self.hidden) 
+        # Use the output of the last timestep for classification
+        last_output = output[-1]
+        last_output = self.dropout(last_output)
 
-        return {'pooler_output': last_hidden_state}
+        return {'pooler_output': last_output}
     

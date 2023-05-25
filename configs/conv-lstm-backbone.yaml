@@ -26,13 +26,13 @@ hyperparameters:
         object: lstm.SentimentConvLSTM
         required_args: {'input_ids', 'sorted_lengths'}
         kwargs: 
-            embedding_dim: 64
-            hidden_size: 64
+            embedding_dim: 32
+            hidden_size: 32
             conv1d_filters: 32
             conv1d_kernel_size: 3
             max_pool_kernel_size: 2
             num_layers: 1
-            dropout: 0.0
+            dropout: 0.4
             bidirectional: True
             
     classifier_head:
