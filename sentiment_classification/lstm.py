@@ -105,14 +105,6 @@ class SentimentConvLSTM(nn.Module):
         self.dropout2d = nn.Dropout2d(cfg.dropout2d)
         self.dropout = nn.Dropout(cfg.dropout)
         
-    def init_hidden(self, batch_size):
-        ''' Initializes hidden state '''
-        # Create two new tensors with sizes n_layers x batch_size x hidden_dim,
-        # initialized to zero, for hidden state and cell state of LSTM
-        h0 = torch.zeros((self.num_layers * self.bidirectional_scaling, batch_size, self.hidden_size))
-        c0 = torch.zeros((self.num_layers * self.bidirectional_scaling, batch_size, self.hidden_size))
-        hidden = (h0,c0)
-        return hidden
         
     def forward(self, input_ids, sorted_lengths, src_key_padding_mask=None, attention_mask=None, token_type_ids=None, output_hidden_states=True):
 
@@ -124,11 +116,11 @@ class SentimentConvLSTM(nn.Module):
         x = self.relu(x)
         x = self.max_pool(x)                    # [B, conv_filters, (seq_len / pool_kernel)]
         x = x.permute(0, 2, 1)                  # [B, (seq_len / pool_kernel), conv_filters]
-        self.hidden = self.init_hidden(B)
-        output, (self.hidden, _) = self.lstm(x, self.hidden) 
+        output, (hidden, _) = self.lstm(x) 
         # Use the output of the last timestep for classification
-        last_output = output[-1]
+        last_output = output[:, -1, :]
         last_output = self.dropout(last_output)
 
-        return {'pooler_output': last_output}
+        return {'pooler_output': last_output,
+                'hidden': hidden}
     
