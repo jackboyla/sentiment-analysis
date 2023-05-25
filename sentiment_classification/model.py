@@ -41,14 +41,9 @@ class SentimentClassifier(pl.LightningModule):
         else:
             run_logger.info(f"No encoder weights frozen")
 
-        # Dropout
-        self.dropout = nn.Dropout(0.1)
-
         # Define Classifier Head
         self.num_classes = self.cfg.num_classes
         self.classifier_head = nn.Sequential(
-            nn.Linear(self.hidden_size, self.hidden_size),
-            nn.ReLU(),
             nn.Linear(self.hidden_size, self.num_classes),
             nn.LogSoftmax(dim=1)
             )
@@ -71,7 +66,6 @@ class SentimentClassifier(pl.LightningModule):
         inputs = {key: value for key, value in inputs.items() if key in self.required_args}
         encoder_output = self.encoder(**inputs, output_hidden_states=True) 
         pooled_output = encoder_output['pooler_output']  # [B, hidden_size]
-        pooled_output = self.dropout(pooled_output)
         logits = self.classifier_head(pooled_output)
         return logits
 
