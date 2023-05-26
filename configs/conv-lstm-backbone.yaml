@@ -23,7 +23,7 @@ data_processing:
 
 hyperparameters:
     backbone:
-        object: lstm.SentimentConvLSTM
+        object: architectures.lstm.SentimentConvLSTM
         required_args: {'input_ids', 'sorted_lengths'}
         kwargs: 
             embedding_dim: 32
@@ -32,7 +32,6 @@ hyperparameters:
             conv1d_kernel_size: 3
             max_pool_kernel_size: 2
             num_layers: 1
-            dropout2d: 0.5
             dropout: 0.4
             bidirectional: True
             

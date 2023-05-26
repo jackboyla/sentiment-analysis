@@ -21,7 +21,7 @@ data_processing:
 
 hyperparameters:
     backbone: 
-        object: transformer.TransformerEncoder
+        object: architectures.transformer.TransformerEncoder
         kwargs: 
             embedding_dim: 128
             hidden_size: 128

@@ -25,7 +25,7 @@ data_processing:
 
 hyperparameters:
     backbone: 
-        object: transformer.TransformerEncoderModel
+        object: architectures.transformer.TransformerEncoderModel
         required_args: {'input_ids', 'src_key_padding_mask'}
         kwargs: 
             embedding_dim: 128

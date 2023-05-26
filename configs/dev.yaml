@@ -20,7 +20,7 @@ data_processing:
 
 hyperparameters:
     backbone:
-        object: lstm.SentimentLSTM
+        object: architectures.lstm.SentimentLSTM
         kwargs: 
             embedding_dim: 32
             hidden_size: 128

@@ -23,7 +23,7 @@ data_processing:
 
 hyperparameters:
     backbone:
-        object: simple_embedding.JustEmbeddingEncoder
+        object: architectures.simple_embedding.JustEmbeddingEncoder
         required_args: {'input_ids'}
         kwargs: 
             embedding_dim: 256
