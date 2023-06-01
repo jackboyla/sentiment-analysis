@@ -44,6 +44,8 @@ class SentimentClassifier(pl.LightningModule):
         # Define Classifier Head
         self.num_classes = self.cfg.num_classes
         self.classifier_head = nn.Sequential(
+            nn.Linear(self.hidden_size, self.hidden_size),
+            nn.ReLU(),
             nn.Linear(self.hidden_size, self.num_classes),
             nn.LogSoftmax(dim=1)
             )
