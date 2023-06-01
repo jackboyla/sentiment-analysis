@@ -69,7 +69,7 @@ def main():
             run_logger.warning("CUDA not available, Lightning Trainer precision being set to standard 32-bit...")
             cfg.hyperparameters.trainer.precision = '32'
         else:
-            run_logger.info(f"Lightning Trainer Precision being set to {cfg.hyperparameters.trainer.precision}")
+            run_logger.info(f"CUDA available! Lightning Trainer Precision being set to {cfg.hyperparameters.trainer.precision}")
 
     set_trainer_precision()
 
